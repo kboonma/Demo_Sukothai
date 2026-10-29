@@ -85,14 +85,43 @@ def wmean(parts):
 
 
 # ---------- load ----------
-def load_raw(raw):
+SCHEMA = {"chirps_monthly": ["rain_mm"], "era5land_monthly": ["sm_l1", "sm_l2", "era_rain_m", "pet_m"],
+          "modis_ndvi_monthly": ["ndvi", "ndvi_crop"], "modis_lst_monthly": ["lst_c"],
+          "s2_water_monthly": ["water_km2", "clear_km2"]}
+
+
+def load_raw(raw, pop_factor=1.0):
+    """Reads the EE exports. Missing files or all-empty columns fall back where possible; each fallback is noted."""
+    notes = []
     def rd(name):
-        df = pd.read_csv(os.path.join(raw, f"{name}.csv"))
+        path = os.path.join(raw, f"{name}.csv")
+        if os.path.exists(os.path.join(raw, f"{name}_v2.csv")):      # re-export from the fixed notebook wins
+            path = os.path.join(raw, f"{name}_v2.csv")
+        if not os.path.exists(path):
+            notes.append(f"{name}: ยังไม่มีไฟล์")
+            return pd.DataFrame({"pcode": pd.Series(dtype=str), "date": pd.Series(dtype="datetime64[ns]"),
+                                 **{c: pd.Series(dtype=float) for c in SCHEMA[name]}})
+        df = pd.read_csv(path)
         df["date"] = pd.to_datetime(df["date"] + "-01")
+        empty = [c for c in SCHEMA[name] if c not in df or df[c].isna().all()]
+        if empty:
+            notes.append(f"{name}: คอลัมน์ว่าง {', '.join(empty)}")
         return df
-    d = {n: rd(n) for n in ["chirps_monthly", "era5land_monthly", "modis_ndvi_monthly",
-                             "modis_lst_monthly", "s2_water_monthly"]}
-    d["static"] = pd.read_csv(os.path.join(raw, "static_layers.csv"))
+    d = {n: rd(n) for n in SCHEMA}
+    if d["chirps_monthly"]["rain_mm"].isna().all() and len(d["era5land_monthly"]):
+        e = d["era5land_monthly"]
+        d["chirps_monthly"] = e[["pcode", "date"]].assign(rain_mm=e["era_rain_m"] * 1000)
+        notes.append("SPI ใช้ฝนจาก ERA5-Land แทน CHIRPS ชั่วคราว")
+    if d["modis_lst_monthly"]["lst_c"].isna().all():
+        notes.append("VHI ใช้ VCI (NDVI) อย่างเดียว เพราะยังไม่มีอุณหภูมิผิวดิน")
+    if not len(d["s2_water_monthly"]):
+        notes.append("ดัชนีน้ำกินยังไม่รวมพื้นที่ผิวน้ำ Sentinel-2")
+    st = pd.read_csv(os.path.join(raw, "static_layers.csv"))
+    if pop_factor != 1.0:
+        st["pop_2020"] = st["pop_2020"] / pop_factor
+        notes.append(f"ประชากรปรับแก้ ÷{pop_factor:g} (export ที่ scale 30 m นับซ้ำ)")
+    d["static"] = st
+    d["notes"] = notes
     return d
 
 
@@ -158,13 +187,14 @@ def compute(d, geo):
         ndvi = g("modis_ndvi_monthly", "ndvi_crop").fillna(g("modis_ndvi_monthly", "ndvi"))
         df["vci"] = kogan(ndvi)
         df["tci"] = kogan(g("modis_lst_monthly", "lst_c"), invert=True)
-        df["vhi"] = 0.5 * df["vci"] + 0.5 * df["tci"]
+        df["vhi"] = (0.5 * df["vci"] + 0.5 * df["tci"]).fillna(df["vci"])   # VCI only if LST missing
         w = d["s2_water_monthly"][d["s2_water_monthly"].pcode == pc].set_index("date").sort_index()
         frac = (w["water_km2"] / w["clear_km2"]).where(w["clear_km2"] > 0)
         df["water_z"] = empirical_z(frac)
         h = min(hist[pc] / 10.0, 1.0)                                # villages declared, capped at 10
         df["agri_index"] = wmean([(0.25, sev_z(df.spi3)), (0.30, sev_z(df.sm_z)),
                                   (0.30, sev_vhi(df.vhi)), (0.15, sev_z(df.spei3))])
+        df["water_hazard"] = wmean([(0.35, sev_z(df.water_z)), (0.25, sev_z(df.spi6)), (0.15, sev_z(df.smdeep_z))])
         df["water_index"] = wmean([(0.35, sev_z(df.water_z)), (0.25, sev_z(df.spi6)),
                                    (0.15, sev_z(df.smdeep_z)), (0.25, pd.Series(h, index=df.index))])
         df["pcode"] = pc
@@ -222,10 +252,11 @@ def write(ts, geo, d, out, mock):
                                               "agri_dec", "water_dec", "moo_total", "pop_2020"]})
     meta = {"generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "mock": mock,
             "now_month": now.strftime("%Y-%m"),
-            "latest_by_indicator": {c: latest_month[c].strftime("%Y-%m") for c in cols},
+            "latest_by_indicator": {c: (None if pd.isna(latest_month[c]) else latest_month[c].strftime("%Y-%m")) for c in cols},
             "analog_years": ANALOG_YEARS,
             "alert_counts_now": pd.Series([s["alert_now"] for s in summary]).value_counts().to_dict(),
-            "alert_counts_dec": pd.Series([s["alert_dec"] for s in summary]).value_counts().to_dict()}
+            "alert_counts_dec": pd.Series([s["alert_dec"] for s in summary]).value_counts().to_dict(),
+            "notes": d.get("notes", [])}
     meta = json.loads(json.dumps(meta, default=int))
     json.dump(geo, open(os.path.join(out, "tambons.geojson"), "w"), ensure_ascii=False, separators=(",", ":"))
     json.dump(series, open(os.path.join(out, "timeseries.json"), "w"), ensure_ascii=False, separators=(",", ":"))
@@ -241,7 +272,7 @@ def validate(ts, geo):
     res = {}
     for month in ["2019-06", "2019-12", "2020-03"]:
         x = ts[ts.date == pd.Timestamp(month + "-01")].set_index("pcode")
-        for c in ["agri_index", "water_index"]:
+        for c in ["agri_index", "water_hazard"]:   # water_hazard excludes DDPM history (the label itself)
             y = x.index.map(lab); s = x[c]
             pos, neg = s[y], s[~y]
             if len(pos) and len(neg):
@@ -254,9 +285,10 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw"); ap.add_argument("--boundaries", required=True)
     ap.add_argument("--out", default="data"); ap.add_argument("--mock", action="store_true")
+    ap.add_argument("--pop-factor", type=float, default=1.0, help="divide population by this (fix for old static export)")
     a = ap.parse_args()
     geo = json.load(open(a.boundaries))
-    d = make_mock(geo) if a.mock else load_raw(a.raw)
+    d = make_mock(geo) if a.mock else load_raw(a.raw, a.pop_factor)
     ts = compute(d, geo)
     print("validation AUC vs DDPM 2019/20 (0.5 = no skill):", validate(ts, geo))
     meta = write(ts, geo, d, a.out, a.mock)
