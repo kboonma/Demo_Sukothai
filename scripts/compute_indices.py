@@ -116,6 +116,8 @@ def load_raw(raw, pop_factor=1.0):
         notes.append("VHI ใช้ VCI (NDVI) อย่างเดียว เพราะยังไม่มีอุณหภูมิผิวดิน")
     if not len(d["s2_water_monthly"]):
         notes.append("ดัชนีน้ำกินยังไม่รวมพื้นที่ผิวน้ำ Sentinel-2")
+    elif "mask_km2" not in d["s2_water_monthly"]:
+        notes.append("พื้นที่ผิวน้ำ Sentinel-2 ยังวัดทั้งตำบล (ปนนาข้าว) จึงแสดงเป็นชั้นข้อมูลแต่ไม่นำเข้าดัชนีน้ำกิน")
     st = pd.read_csv(os.path.join(raw, "static_layers.csv"))
     if pop_factor != 1.0:
         st["pop_2020"] = st["pop_2020"] / pop_factor
@@ -170,6 +172,8 @@ def make_mock(geo, seed=7):
 # ---------- compute ----------
 def compute(d, geo):
     hist = {f["properties"]["pcode"]: f["properties"].get("moo_total", 0) for f in geo["features"]}
+    v2_water = "mask_km2" in d["s2_water_monthly"] and d["s2_water_monthly"]["mask_km2"].notna().any()
+    area_by_pc = {f["properties"]["pcode"]: f["properties"].get("area_km2") or np.nan for f in geo["features"]}
     st = d["static"].set_index("pcode")
     out = []
     for pc in sorted(hist):
@@ -189,13 +193,23 @@ def compute(d, geo):
         df["tci"] = kogan(g("modis_lst_monthly", "lst_c"), invert=True)
         df["vhi"] = (0.5 * df["vci"] + 0.5 * df["tci"]).fillna(df["vci"])   # VCI only if LST missing
         w = d["s2_water_monthly"][d["s2_water_monthly"].pcode == pc].set_index("date").sort_index()
-        frac = (w["water_km2"] / w["clear_km2"]).where(w["clear_km2"] > 0)
+        area = area_by_pc.get(pc, np.nan)
+        # need >= 50% of the tambon cloud-free that month, else the water fraction is too noisy
+        if "mask_km2" in w and w["mask_km2"].notna().any():          # v2: water bodies only
+            base_area = w["mask_km2"]
+            frac = (w["water_km2"] / w["clear_km2"]).where((w["clear_km2"] >= 0.5 * base_area) & (base_area >= 0.01))
+        else:
+            frac = (w["water_km2"] / w["clear_km2"]).where(w["clear_km2"] >= 0.5 * area)
         df["water_z"] = empirical_z(frac)
+        if not v2_water:      # whole-tambon water is dominated by paddy; show it but keep it out of the index
+            water_for_index = pd.Series(np.nan, index=df.index)
+        else:
+            water_for_index = df["water_z"]
         h = min(hist[pc] / 10.0, 1.0)                                # villages declared, capped at 10
         df["agri_index"] = wmean([(0.25, sev_z(df.spi3)), (0.30, sev_z(df.sm_z)),
                                   (0.30, sev_vhi(df.vhi)), (0.15, sev_z(df.spei3))])
-        df["water_hazard"] = wmean([(0.35, sev_z(df.water_z)), (0.25, sev_z(df.spi6)), (0.15, sev_z(df.smdeep_z))])
-        df["water_index"] = wmean([(0.35, sev_z(df.water_z)), (0.25, sev_z(df.spi6)),
+        df["water_hazard"] = wmean([(0.35, sev_z(water_for_index)), (0.25, sev_z(df.spi6)), (0.15, sev_z(df.smdeep_z))])
+        df["water_index"] = wmean([(0.35, sev_z(water_for_index)), (0.25, sev_z(df.spi6)),
                                    (0.15, sev_z(df.smdeep_z)), (0.25, pd.Series(h, index=df.index))])
         df["pcode"] = pc
         out.append(df.reset_index().rename(columns={"index": "date"}))
@@ -203,7 +217,8 @@ def compute(d, geo):
 
 
 def alert(row, crop_frac):
-    if row["water_index"] >= 0.60: return 3
+    # red needs a real current/expected water shortage signal, not only past declarations
+    if row["water_index"] >= 0.60 and row.get("water_hazard", 1) >= 0.45: return 3
     if row["agri_index"] >= 0.50 and crop_frac >= 0.10: return 2
     if max(row["water_index"], row["agri_index"]) >= 0.30: return 1
     return 0
@@ -235,14 +250,15 @@ def write(ts, geo, d, out, mock):
         dec = t[(t.index.month == 12) & (t.index.year.isin(ANALOG_YEARS))]
         o_agri = 0.5 * cur["agri_index"] + 0.5 * dec["agri_index"].mean()
         o_water = 0.5 * cur["water_index"] + 0.5 * dec["water_index"].mean()
+        o_haz = 0.5 * cur["water_hazard"] + 0.5 * dec["water_hazard"].mean()
         a_now = alert(cur, crop_frac)
-        a_dec = alert({"agri_index": o_agri, "water_index": o_water}, crop_frac)
+        a_dec = alert({"agri_index": o_agri, "water_index": o_water, "water_hazard": o_haz}, crop_frac)
         r = lambda v, n=2: None if pd.isna(v) else round(float(v), n)
         p.update({
             "pop_2020": r(st.loc[pc, "pop_2020"], 0) if pc in st.index else None,
             "crop_frac": r(crop_frac), "alert_now": a_now, "alert_dec": a_dec,
             "agri_now": r(cur["agri_index"]), "water_now": r(cur["water_index"]),
-            "agri_dec": r(o_agri), "water_dec": r(o_water),
+            "agri_dec": r(o_agri), "water_dec": r(o_water), "water_hazard_dec": r(o_haz),
             **{f"{c}_now": r(cur[c]) for c in ["spi3", "spi6", "sm_z", "vhi", "water_z"]},
         })
         sub = t[t.index >= "2018-01-01"]
