@@ -205,95 +205,144 @@ def compute(d, geo):
             water_for_index = pd.Series(np.nan, index=df.index)
         else:
             water_for_index = df["water_z"]
-        h = min(hist[pc] / 10.0, 1.0)                                # villages declared, capped at 10
-        df["agri_index"] = wmean([(0.25, sev_z(df.spi3)), (0.30, sev_z(df.sm_z)),
-                                  (0.30, sev_vhi(df.vhi)), (0.15, sev_z(df.spei3))])
-        df["water_hazard"] = wmean([(0.35, sev_z(water_for_index)), (0.25, sev_z(df.spi6)), (0.15, sev_z(df.smdeep_z))])
-        df["water_index"] = wmean([(0.35, sev_z(water_for_index)), (0.25, sev_z(df.spi6)),
-                                   (0.15, sev_z(df.smdeep_z)), (0.25, pd.Series(h, index=df.index))])
+        df["veg_z"] = empirical_z(ndvi)
+        df["water_z_idx"] = water_for_index
+        df["agri_level"] = cdi_levels(df)
+        df["water_haz"] = water_hazard_level(df)
         df["pcode"] = pc
         out.append(df.reset_index().rename(columns={"index": "date"}))
     return pd.concat(out, ignore_index=True)
 
 
-def alert(row, crop_frac):
-    # red needs a real current/expected water shortage signal, not only past declarations
-    if row["water_index"] >= 0.60 and row.get("water_hazard", 1) >= 0.45: return 3
-    if row["agri_index"] >= 0.50 and crop_frac >= 0.10: return 2
-    if max(row["water_index"], row["agri_index"]) >= 0.30: return 1
+# ---------- classification (literature-based, no arbitrary weights) ----------
+# Agricultural drought: cascade of the EDO Combined Drought Indicator (Sepulcre-Canto et al. 2012, NHESS 12:3519)
+#   1 Watch   : SPI-3 <= -1 or SPI-1 <= -2                       (rain deficit)
+#   2 Warning : soil-moisture anomaly <= -1, with rain deficit or previous level >= 1
+#   3 Alert   : vegetation anomaly <= -1, with SM deficit or previous level >= 2
+def cdi_step(spi1, spi3, sm, veg, prev):
+    rain = (spi3 <= -1) or (spi1 <= -2)
+    if veg <= -1 and (sm <= -1 or prev >= 2): return 3
+    if sm <= -1 and (rain or prev >= 1): return 2
+    if rain: return 1
     return 0
 
 
-def latest_valid(s):
-    s = s.dropna()
-    return (s.index[-1], s.iloc[-1]) if len(s) else (None, np.nan)
+def cdi_levels(df):
+    lv, prev = [], 0
+    for _, r in df.iterrows():
+        v = [r.get(k) for k in ("spi1", "spi3", "sm_z", "veg_z")]
+        v = [99 if pd.isna(x) else x for x in v]
+        prev = cdi_step(*v, prev)
+        lv.append(prev)
+    return pd.Series(lv, index=df.index)
+
+
+# Drinking-water hazard: count of hydrological deficits (SPI-6, deep soil moisture, water-body area when available)
+#   0 none, 1 moderate (one deficit), 2 high (two or more)
+def water_hazard_level(df):
+    flags = (df["spi6"] <= -1).astype(int) + (df["smdeep_z"] <= -1).astype(int) + (df["water_z_idx"] <= -1).astype(int)
+    return flags.clip(upper=2)
+
+
+# Risk matrix (IPCC hazard x vulnerability). Vulnerability from DDPM villages in drought areas, 8 years 2560-2567:
+#   0 = no year, 1 = one year, 2 = two or more years
+WATER_MATRIX = {   # (vulnerability, hazard) -> 0 none, 1 watch, 3 prepare water delivery
+    (0, 0): 0, (0, 1): 0, (0, 2): 1,
+    (1, 0): 0, (1, 1): 1, (1, 2): 3,
+    (2, 0): 1, (2, 1): 1, (2, 2): 3,
+}
+
+
+def alert(agri_level, water_haz, vuln, crop_frac):
+    w = WATER_MATRIX[(vuln, int(water_haz))]
+    if w == 3: return 3
+    if agri_level >= 2 and crop_frac >= 0.10: return 2
+    if agri_level >= 1 or w == 1: return 1
+    return 0
 
 
 # ---------- write ----------
-def write(ts, geo, d, out, mock):
+def write(ts, geo, d, out, mock, vuln):
     os.makedirs(out, exist_ok=True)
     st = d["static"].set_index("pcode")
     ts = ts.set_index(["pcode", "date"]).sort_index()
-    cols = ["rain_mm", "spi1", "spi3", "spi6", "spei3", "sm_z", "smdeep_z", "vci", "tci", "vhi", "water_z",
-            "agri_index", "water_index"]
+    cols = ["rain_mm", "spi1", "spi3", "spi6", "spei3", "sm_z", "smdeep_z", "veg_z", "vci", "tci", "vhi", "water_z"]
     latest_month = {c: ts[c].dropna().index.get_level_values("date").max() for c in cols}
-    # "now" = latest month in which both composites exist
-    now = min(latest_month["agri_index"], latest_month["water_index"])
+    now = min(latest_month["spi3"], latest_month["sm_z"], latest_month["veg_z"])
+    zc = ["spi1", "spi3", "spi6", "sm_z", "smdeep_z", "veg_z", "water_z_idx"]
     series, summary = {}, []
     for f in geo["features"]:
         p = f["properties"]; pc = p["pcode"]
         t = ts.loc[pc]
-        cur = t.loc[now] if now in t.index else t.iloc[-1]
+        cur = t.loc[now]
         area = p.get("area_km2") or 1
         crop_frac = float(st.loc[pc, "crop_km2"] / area) if pc in st.index else 0
-        # December outlook: half persistence of current state, half analog-year December anomaly
+        v = vuln.get(pc, {"level": 0, "years": 0, "villages": 0})
+        # December outlook: each anomaly = half persistence of now + half the mean December anomaly of El Nino analog years
         dec = t[(t.index.month == 12) & (t.index.year.isin(ANALOG_YEARS))]
-        o_agri = 0.5 * cur["agri_index"] + 0.5 * dec["agri_index"].mean()
-        o_water = 0.5 * cur["water_index"] + 0.5 * dec["water_index"].mean()
-        o_haz = 0.5 * cur["water_hazard"] + 0.5 * dec["water_hazard"].mean()
-        a_now = alert(cur, crop_frac)
-        a_dec = alert({"agri_index": o_agri, "water_index": o_water, "water_hazard": o_haz}, crop_frac)
-        r = lambda v, n=2: None if pd.isna(v) else round(float(v), n)
+        zd = {c: (0.5 * cur[c] + 0.5 * dec[c].mean()) if pd.notna(cur[c]) else dec[c].mean() for c in zc}
+        zd = {c: (99 if pd.isna(x) else x) for c, x in zd.items()}
+        agri_dec = cdi_step(zd["spi1"], zd["spi3"], zd["sm_z"], zd["veg_z"], int(cur["agri_level"]))
+        haz_dec = min(2, int(zd["spi6"] <= -1) + int(zd["smdeep_z"] <= -1) + int(zd["water_z_idx"] <= -1))
+        a_now = alert(int(cur["agri_level"]), int(cur["water_haz"]), v["level"], crop_frac)
+        a_dec = alert(agri_dec, haz_dec, v["level"], crop_frac)
+        r = lambda x, n=2: None if pd.isna(x) else round(float(x), n)
         p.update({
             "pop_2020": r(st.loc[pc, "pop_2020"], 0) if pc in st.index else None,
             "crop_frac": r(crop_frac), "alert_now": a_now, "alert_dec": a_dec,
-            "agri_now": r(cur["agri_index"]), "water_now": r(cur["water_index"]),
-            "agri_dec": r(o_agri), "water_dec": r(o_water), "water_hazard_dec": r(o_haz),
-            **{f"{c}_now": r(cur[c]) for c in ["spi3", "spi6", "sm_z", "vhi", "water_z"]},
+            "agri_now": int(cur["agri_level"]), "agri_dec": agri_dec,
+            "haz_now": int(cur["water_haz"]), "haz_dec": haz_dec,
+            "vuln": v["level"], "vuln_years": v["years"], "vuln_villages": v["villages"],
+            **{f"{c}_now": r(cur[c]) for c in ["spi3", "spi6", "sm_z", "veg_z", "vhi", "water_z"]},
+            **{f"{c}_dec": r(zd[c]) if zd[c] != 99 else None for c in ["spi3", "spi6", "sm_z", "veg_z"]},
         })
         sub = t[t.index >= "2018-01-01"]
         series[pc] = {"dates": [x.strftime("%Y-%m") for x in sub.index],
-                      **{c: [r(v) for v in sub[c]] for c in ["rain_mm", "spi3", "sm_z", "vhi", "water_z", "agri_index", "water_index"]}}
-        summary.append({k: p.get(k) for k in ["pcode", "amphoe", "tambon", "alert_now", "alert_dec", "agri_now", "water_now",
-                                              "agri_dec", "water_dec", "moo_total", "pop_2020"]})
+                      **{c: [r(x) for x in sub[c]] for c in ["rain_mm", "spi3", "spi6", "sm_z", "veg_z", "vhi", "water_z"]},
+                      "agri_level": [int(x) for x in sub["agri_level"]], "water_haz": [int(x) for x in sub["water_haz"]]}
+        summary.append({k: p.get(k) for k in ["pcode", "amphoe", "tambon", "alert_now", "alert_dec", "agri_now", "agri_dec",
+                                              "haz_now", "haz_dec", "vuln", "vuln_years", "pop_2020"]})
     meta = {"generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "mock": mock,
             "now_month": now.strftime("%Y-%m"),
             "latest_by_indicator": {c: (None if pd.isna(latest_month[c]) else latest_month[c].strftime("%Y-%m")) for c in cols},
-            "analog_years": ANALOG_YEARS,
-            "alert_counts_now": pd.Series([s["alert_now"] for s in summary]).value_counts().to_dict(),
-            "alert_counts_dec": pd.Series([s["alert_dec"] for s in summary]).value_counts().to_dict(),
+            "analog_years": ANALOG_YEARS, "method": "CDI cascade + hazard x vulnerability matrix",
+            "alert_counts_now": pd.Series([x["alert_now"] for x in summary]).value_counts().to_dict(),
+            "alert_counts_dec": pd.Series([x["alert_dec"] for x in summary]).value_counts().to_dict(),
             "notes": d.get("notes", [])}
     meta = json.loads(json.dumps(meta, default=int))
     json.dump(geo, open(os.path.join(out, "tambons.geojson"), "w"), ensure_ascii=False, separators=(",", ":"))
     json.dump(series, open(os.path.join(out, "timeseries.json"), "w"), ensure_ascii=False, separators=(",", ":"))
     json.dump(meta, open(os.path.join(out, "meta.json"), "w"), ensure_ascii=False, indent=1)
-    pd.DataFrame(summary).sort_values(["alert_dec", "water_dec"], ascending=False).to_csv(
+    pd.DataFrame(summary).sort_values(["alert_dec", "haz_dec", "vuln"], ascending=False).to_csv(
         os.path.join(out, "tambon_alerts.csv"), index=False, encoding="utf-8-sig")
     return meta
 
 
+def load_vuln(path):
+    """DDPM dpm-gd016 tambon summary: years with villages in drought areas, 2560-2567."""
+    if not path or not os.path.exists(path):
+        return {}
+    v = pd.read_csv(path)
+    out = {}
+    for _, row in v.iterrows():
+        pc = "TH" + str(row["รหัสตำบล"])
+        yrs = int(row["years_any"])
+        out[pc] = {"level": 0 if yrs == 0 else 1 if yrs == 1 else 2, "years": yrs, "villages": int(row["villages"])}
+    return out
+
+
 def validate(ts, geo):
-    """How well do the indices separate DDPM-declared tambons in the 2019/20 event? (AUC)"""
+    """Do the levels pick out DDPM-declared tambons of 2019/20? AUC (0.5 = chance) and declared share per level."""
     lab = {f["properties"]["pcode"]: f["properties"].get("moo_total", 0) > 0 for f in geo["features"]}
     res = {}
     for month in ["2019-06", "2019-12", "2020-03"]:
         x = ts[ts.date == pd.Timestamp(month + "-01")].set_index("pcode")
-        for c in ["agri_index", "water_hazard"]:   # water_hazard excludes DDPM history (the label itself)
-            y = x.index.map(lab); s = x[c]
-            pos, neg = s[y], s[~y]
+        for c in ["agri_level", "water_haz"]:
+            y = x.index.map(lab); s_ = x[c]
+            pos, neg = s_[y], s_[~y]
             if len(pos) and len(neg):
                 auc = (pos.values[:, None] > neg.values[None, :]).mean() + 0.5 * (pos.values[:, None] == neg.values[None, :]).mean()
-                res[f"{month} {c}"] = round(float(auc), 2)
+                res[f"{month} {c}"] = {"auc": round(float(auc), 2), "levels_all": x[c].value_counts().sort_index().to_dict()}
     return res
 
 
@@ -301,11 +350,12 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw"); ap.add_argument("--boundaries", required=True)
     ap.add_argument("--out", default="data"); ap.add_argument("--mock", action="store_true")
+    ap.add_argument("--vuln", default="data/source/sukhothai_ddpm_risk_villages_2560-2567_tambon.csv")
     ap.add_argument("--pop-factor", type=float, default=1.0, help="divide population by this (fix for old static export)")
     a = ap.parse_args()
     geo = json.load(open(a.boundaries))
     d = make_mock(geo) if a.mock else load_raw(a.raw, a.pop_factor)
     ts = compute(d, geo)
     print("validation AUC vs DDPM 2019/20 (0.5 = no skill):", validate(ts, geo))
-    meta = write(ts, geo, d, a.out, a.mock)
+    meta = write(ts, geo, d, a.out, a.mock, load_vuln(a.vuln))
     print(json.dumps(meta, ensure_ascii=False, indent=1))
