@@ -1,0 +1,354 @@
+<title>Sukhothai Drought Watch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: status strip -> map + tambon panel -> priority table -> 2019 analog -> method. Water-blue accent on mineral greys; alert colours are semantic only. */
+:root{
+  --bg:#f3f5f5; --surface:#ffffff; --line:#d5dcdc; --fg:#17201f; --muted:#5b6866;
+  --accent:#0b6e82; --accent-soft:#dcedf0;
+  --a0:#e3e8e6; --a1:#f0c93a; --a2:#ea7d1f; --a3:#c23a2c;
+  --a1-ink:#5c4700; --a2-ink:#6b3300; --a3-ink:#ffffff;
+  --mock:#fff3cd; --mock-ink:#5c4700;
+  --display:"Anuphan","IBM Plex Sans Thai",system-ui,sans-serif;
+  --body:"IBM Plex Sans Thai",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111716; --surface:#19211f; --line:#2c3735; --fg:#e4ebe9; --muted:#9aa8a5;
+  --accent:#5cc2d6; --accent-soft:#16343a; --a0:#2a3331; --mock:#3a3112; --mock-ink:#f3dc8a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111716; --surface:#19211f; --line:#2c3735; --fg:#e4ebe9; --muted:#9aa8a5;
+  --accent:#5cc2d6; --accent-soft:#16343a; --a0:#2a3331; --mock:#3a3112; --mock-ink:#f3dc8a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);font-weight:600;margin:0;text-wrap:balance;line-height:1.25}
+h1{font-size:1.75rem} h2{font-size:1.25rem} h3{font-size:1.05rem}
+.eyebrow{font:500 .75rem/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between}
+.status{display:flex;flex-wrap:wrap;gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-width:120px}
+.stat b{display:block;font:500 1.1rem var(--mono)}
+.mock{background:var(--mock);color:var(--mock-ink);border-radius:8px;padding:10px 14px;font-size:.9rem}
+
+.counts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:.85rem;font-weight:500;white-space:nowrap}
+.pill i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.p0{background:var(--a0);color:var(--fg)} .p1{background:var(--a1);color:var(--a1-ink)}
+.p2{background:var(--a2);color:var(--a2-ink)} .p3{background:var(--a3);color:var(--a3-ink)}
+
+.main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px}
+@media (max-width:860px){.main{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.layers{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.layers button{font:500 .82rem var(--body);border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:5px 10px;cursor:pointer}
+.layers button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.layers .sep{width:1px;background:var(--line);margin:0 4px}
+#map{height:560px;border-radius:8px;background:var(--bg)}
+@media (max-width:860px){#map{height:440px}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-top:10px;font-size:.82rem;color:var(--muted)}
+.ramp{height:10px;width:160px;border-radius:3px}
+.legend .tag{display:inline-flex;gap:5px;align-items:center}
+.legend .sw{width:12px;height:12px;border-radius:2px;display:inline-block}
+.layer-note{font-size:.8rem;color:var(--muted);margin-top:6px}
+
+.detail{display:flex;flex-direction:column;gap:14px}
+.detail .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.action{border-radius:8px;padding:10px 12px;font-size:.9rem}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:.85rem}
+.bar{height:8px;background:var(--a0);border-radius:4px;overflow:hidden}
+.bar span{display:block;height:100%}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.kv div{border-top:1px solid var(--line);padding-top:6px}
+.kv small{display:block;color:var(--muted);font-size:.75rem}
+.chartbox{position:relative;height:200px}
+.empty{color:var(--muted);padding:40px 0;text-align:center}
+
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+.tools select,.tools input{font:inherit;font-size:.9rem;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:6px 8px}
+.tablebox{overflow-x:auto;max-height:440px;overflow-y:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:.78rem;position:sticky;top:0;background:var(--surface)}
+td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tbody tr{cursor:pointer} tbody tr:hover,tbody tr.sel{background:var(--accent-soft)}
+
+.timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:860px){.timeline{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.timeline{grid-template-columns:1fr}}
+.tl{border-top:3px solid var(--line);padding-top:8px}
+.tl.hot{border-top-color:var(--a3)}
+.tl .when{font:500 .8rem var(--mono);color:var(--muted)}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+@media (max-width:760px){.cols{grid-template-columns:1fr}}
+.cols ul{margin:6px 0 0;padding-left:18px} .cols li{margin:3px 0}
+footer{font-size:.8rem;color:var(--muted)}
+
+/* Leaflet essentials (stylesheet inlined) */
+.leaflet-pane,.leaflet-layer,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent;font:inherit;touch-action:none}
+.leaflet-overlay-pane{z-index:400}.leaflet-tooltip-pane{z-index:650}.leaflet-map-pane{z-index:100}
+.leaflet-pane>svg path{pointer-events:none}.leaflet-pane>svg path.leaflet-interactive{pointer-events:auto;cursor:pointer}
+.leaflet-zoom-animated{transform-origin:0 0}
+.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
+.leaflet-control-container .leaflet-top{position:absolute;z-index:1000;pointer-events:none;top:0;left:0}
+.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both;margin:10px 0 0 10px}
+.leaflet-bar{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.leaflet-bar a{display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;color:var(--fg);font:600 16px var(--mono)}
+.leaflet-bar a+a{border-top:1px solid var(--line)}
+.leaflet-tooltip{position:absolute;padding:6px 8px;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:6px;white-space:nowrap;pointer-events:none;font-size:.82rem;box-shadow:0 2px 8px rgb(0 0 0 / .15)}
+@media (prefers-reduced-motion:reduce){.leaflet-zoom-anim .leaflet-zoom-animated{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">จังหวัดสุโขทัย · 86 ตำบล · ต้นแบบ</div>
+      <h1>เฝ้าระวังภัยแล้งรายตำบล ฤดูแล้ง 2569/70</h1>
+    </div>
+    <div class="status">
+      <div class="stat"><span class="eyebrow">ENSO ต.ค. 2569</span><b>Niño 3.4 +3.3°C</b><span class="muted" style="font-size:.8rem">El Niño แรงมาก</span></div>
+      <div class="stat"><span class="eyebrow">ข้อมูลล่าสุด</span><b id="m-now">–</b><span class="muted" style="font-size:.8rem" id="m-gen"></span></div>
+    </div>
+  </header>
+
+  <div class="mock" id="mockbar" hidden><b>ข้อมูลดัชนีบนหน้านี้เป็นข้อมูลจำลอง</b> ใช้เพื่อแสดงรูปแบบ dashboard เท่านั้น ชั้น "ประวัติประกาศภัย ปภ." เป็นข้อมูลจริง ส่วนดัชนีจะถูกแทนด้วยค่าจากดาวเทียมเมื่อประมวลผลเสร็จ</div>
+
+  <section class="panel">
+    <div style="display:flex;flex-wrap:wrap;gap:10px 20px;justify-content:space-between;align-items:center">
+      <h2>แนวโน้มเดือนธันวาคม: ตำบลแยกตามระดับเตือน</h2>
+      <div class="counts" id="counts"></div>
+    </div>
+  </section>
+
+  <div class="main">
+    <section class="panel">
+      <div class="layers" id="layers" role="group" aria-label="ชั้นข้อมูลแผนที่"></div>
+      <div id="map" role="img" aria-label="แผนที่ตำบลจังหวัดสุโขทัย"></div>
+      <div class="legend" id="legend"></div>
+      <div class="layer-note" id="layernote"></div>
+    </section>
+    <aside class="panel detail" id="detail" aria-live="polite">
+      <div class="empty">คลิกตำบลบนแผนที่หรือในตาราง เพื่อดูรายละเอียด</div>
+    </aside>
+  </div>
+
+  <section class="panel">
+    <h2>ลำดับความสำคัญรายตำบล</h2>
+    <div class="tools">
+      <label for="f-amphoe" class="muted">อำเภอ</label>
+      <select id="f-amphoe"><option value="">ทุกอำเภอ</option></select>
+      <label for="f-q" class="muted">ค้นหาตำบล</label>
+      <input id="f-q" type="search" placeholder="เช่น ป่ากุมเกาะ">
+      <span class="muted" id="f-count" style="font-size:.85rem"></span>
+    </div>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>ตำบล</th><th>อำเภอ</th><th>ระดับ ธ.ค.</th><th>สิ่งที่ควรเตรียม</th><th>ดัชนีน้ำกิน</th><th>ดัชนีเกษตร</th><th>หมู่บ้านเคยประกาศ</th><th>ประชากร</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="eyebrow">ปีเทียบเคียง</div>
+    <h2>ปี 2562–63 สุโขทัยเคยประกาศภัยแล้งในเดือนธันวาคม</h2>
+    <p class="muted" style="max-width:70ch">ข้อมูล ปภ. แสดงว่าสุโขทัยถูกประกาศเขตภัยแล้ง 2 ปีงบประมาณ รวม 35 ตำบล 241 หมู่บ้าน ใน 6 จาก 9 อำเภอ และไม่มีตำบลใดถูกประกาศซ้ำทั้งสองปี</p>
+    <div class="timeline" style="margin-top:12px">
+      <div class="tl"><div class="when">พ.ค.–มิ.ย. 2562</div><h3>ปีงบ 2562</h3><p class="muted">18 ตำบล 142 หมู่บ้าน ส่วนใหญ่ อ.สวรรคโลก และศรีนคร</p></div>
+      <div class="tl"><div class="when">ต.ค.–ธ.ค. 2562</div><h3>สถานการณ์เริ่ม</h3><p class="muted">ฝนหมดเร็ว แหล่งน้ำเริ่มแห้งหลังฤดูฝน</p></div>
+      <div class="tl hot"><div class="when">25 ธ.ค. 2562</div><h3>ลงนามประกาศเขตภัย</h3><p class="muted">17 ตำบล 99 หมู่บ้าน อ.คีรีมาศ เมือง ศรีสัชนาลัย ศรีสำโรง</p></div>
+      <div class="tl"><div class="when">ก.พ.–มิ.ย. 2563</div><h3>สิ้นสุดสถานการณ์</h3><p class="muted">ยุติเป็นรายพื้นที่ บางตำบลลากยาวถึงปลายฤดูแล้ง</p></div>
+    </div>
+  </section>
+
+  <section class="panel cols">
+    <div>
+      <h2>วิธีคิดระดับเตือน</h2>
+      <ul>
+        <li><b>ดัชนีน้ำกิน-น้ำใช้</b> = พื้นที่ผิวน้ำผิดปกติ (Sentinel-2) 35% + SPI-6 25% + ความชื้นดินชั้นล่าง 15% + ประวัติประกาศภัย 25%</li>
+        <li><b>ดัชนีแล้งเกษตร</b> = SPI-3 25% + ความชื้นดิน 30% + VHI 30% + SPEI-3 15%</li>
+        <li><b>แนวโน้ม ธ.ค.</b> = ครึ่งหนึ่งจากสภาพล่าสุด อีกครึ่งจากค่าเดือน ธ.ค. ในปี El Niño 2558, 2562, 2566</li>
+        <li><span class="pill p3">เตรียมแจกจ่ายน้ำ</span> ดัชนีน้ำกิน ≥ 0.6 · <span class="pill p2">เตือนเกษตร</span> ดัชนีเกษตร ≥ 0.5 และมีพื้นที่เพาะปลูก ≥ 10% · <span class="pill p1">เฝ้าระวัง</span> ดัชนีใดดัชนีหนึ่ง ≥ 0.3</li>
+        <li>น้ำหนักและเกณฑ์เป็นค่าเบื้องต้น ต้องปรับเทียบกับการประกาศภัยปี 2562–63 และความเห็นกรมชลประทาน</li>
+      </ul>
+    </div>
+    <div>
+      <h2>แหล่งข้อมูล</h2>
+      <ul>
+        <li>ฝน: CHIRPS (1981–ปัจจุบัน) → SPI-1/3/6</li>
+        <li>ความชื้นดินและการระเหย: ERA5-Land → SPEI-3</li>
+        <li>สุขภาพพืช: MODIS NDVI + อุณหภูมิผิวดิน → VHI</li>
+        <li>แหล่งน้ำผิวดิน: Sentinel-2 (2560–ปัจจุบัน)</li>
+        <li>ประวัติประกาศภัย: ปภ. ชุดข้อมูล dpm-gd028 (ปีงบ 2562–2568, ข้อมูลเปิดบางปีไม่ครบ)</li>
+        <li>ขอบเขตตำบล: กรมแผนที่ทหาร ผ่าน HDX COD-AB</li>
+        <li>ประชากร: WorldPop 2020 · การใช้ที่ดิน: ESA WorldCover</li>
+      </ul>
+    </div>
+  </section>
+  <footer>ต้นแบบเพื่อนำเสนอแนวคิด ยังไม่ใช่ข้อมูลทางการ · ไฟล์ข้อมูลอยู่ในโฟลเดอร์ data/ ของ repository</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const ALERT = [
+  {t:"ปกติ", act:"ติดตามตามปกติ"},
+  {t:"เฝ้าระวัง", act:"ติดตามรายสัปดาห์ สำรวจแหล่งน้ำหมู่บ้าน"},
+  {t:"เตือนเกษตร", act:"ประกาศเตือนชะลอนาปรัง ก่อนลงทุนปุ๋ย"},
+  {t:"เตรียมแจกจ่ายน้ำ", act:"เตรียมรถน้ำ ถังเก็บน้ำ และจุดเติมน้ำ"}
+];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const aColor = a => css(`--a${a}`);
+const lerp = (c1,c2,t) => { const h=x=>[1,3,5].map(i=>parseInt(x.slice(i,i+2),16)); const a=h(c1),b=h(c2);
+  return "#"+a.map((v,i)=>Math.round(v+(b[i]-v)*t).toString(16).padStart(2,"0")).join(""); };
+const ramp = (stops,t) => { t=Math.max(0,Math.min(1,t)); const n=stops.length-1, i=Math.min(n-1,Math.floor(t*n)); return lerp(stops[i],stops[i+1],t*n-i); };
+const SEQ = ["#fbf3d5","#f3c56b","#e07a2f","#a8321f","#5e1a12"];
+const DIV = ["#8c4a16","#d9a35c","#efe9dc","#6fb3c9","#1f5f8b"];   // dry -> wet
+const NA = "#9aa3a1";
+
+const LAYERS = [
+  {id:"alert_dec", label:"แนวโน้ม ธ.ค.", type:"alert", note:"ระดับเตือนที่คาดการณ์สำหรับเดือนธันวาคม"},
+  {id:"alert_now", label:"สภาพล่าสุด", type:"alert", note:"ระดับเตือนจากข้อมูลเดือนล่าสุด"},
+  {sep:true},
+  {id:"water_dec", label:"ดัชนีน้ำกิน", type:"seq", lo:0, hi:1, note:"0 = ไม่เสี่ยง, 1 = เสี่ยงสูง (แนวโน้ม ธ.ค.)"},
+  {id:"agri_dec", label:"ดัชนีเกษตร", type:"seq", lo:0, hi:1, note:"0 = ไม่เสี่ยง, 1 = เสี่ยงสูง (แนวโน้ม ธ.ค.)"},
+  {id:"moo_total", label:"ประวัติ ปภ.", type:"seq", lo:0, hi:14, real:true, note:"จำนวนหมู่บ้านที่ถูกประกาศเขตภัยแล้ง ปีงบ 2562–63 (ข้อมูลจริง)"},
+  {sep:true},
+  {id:"spi3_now", label:"SPI-3", type:"div", lo:-2, hi:2, note:"ฝนสะสม 3 เดือน เทียบค่าปกติ (ติดลบ = แล้ง)"},
+  {id:"sm_z_now", label:"ความชื้นดิน", type:"div", lo:-2, hi:2, note:"ความชื้นดินชั้นบน เทียบค่าปกติเดือนเดียวกัน"},
+  {id:"vhi_now", label:"VHI", type:"div", lo:0, hi:80, note:"สุขภาพพืช 0–100 (ต่ำกว่า 40 = เครียดจากความแล้ง)"},
+  {id:"water_z_now", label:"น้ำผิวดิน", type:"div", lo:-2, hi:2, note:"พื้นที่ผิวน้ำ บ่อ/อ่างเล็ก เทียบค่าปกติเดือนเดียวกัน"}
+];
+
+let geo, ts, meta, map, gLayer, chart, current = LAYERS[0], selected = null;
+const byPc = {};
+
+function colorFor(p, L) {
+  const v = p[L.id];
+  if (v == null) return NA;
+  if (L.type === "alert") return aColor(v);
+  const t = (v - L.lo) / (L.hi - L.lo);
+  return L.type === "seq" ? ramp(SEQ, t) : ramp(DIV, t);
+}
+function style(f) {
+  const sel = selected === f.properties.pcode;
+  return {fillColor: colorFor(f.properties, current), fillOpacity: .88,
+          color: sel ? css("--fg") : css("--surface"), weight: sel ? 2.5 : .8};
+}
+const fmt = (v, d=2) => v == null ? "–" : Number(v).toFixed(d);
+const pill = a => `<span class="pill p${a}"><i style="background:currentColor;opacity:.6"></i>${ALERT[a].t}</span>`;
+
+function drawLegend() {
+  const L = current, el = document.getElementById("legend");
+  if (L.type === "alert") el.innerHTML = ALERT.map((a,i)=>`<span class="tag"><span class="sw" style="background:${aColor(i)}"></span>${a.t}</span>`).join("");
+  else {
+    const st = L.type === "seq" ? SEQ : DIV;
+    el.innerHTML = `<span class="num">${L.lo}</span><span class="ramp" style="background:linear-gradient(90deg,${st.join(",")})"></span><span class="num">${L.hi}</span>
+      <span class="tag"><span class="sw" style="background:${NA}"></span>ไม่มีข้อมูล</span>`;
+  }
+  document.getElementById("layernote").textContent = L.note + (meta.mock && !L.real ? " · ข้อมูลจำลอง" : "");
+}
+function setLayer(L) {
+  current = L;
+  document.querySelectorAll("#layers button").forEach(b => b.setAttribute("aria-pressed", b.dataset.id === L.id));
+  gLayer.setStyle(style); drawLegend();
+}
+
+function showDetail(pc) {
+  selected = pc; gLayer.setStyle(style);
+  document.querySelectorAll("#tbody tr").forEach(r => r.classList.toggle("sel", r.dataset.pc === pc));
+  const p = byPc[pc], s = ts[pc], el = document.getElementById("detail");
+  const bar = (label, v) => `<span>${label}</span><span class="bar"><span style="width:${(v||0)*100}%;background:${ramp(SEQ,v||0)}"></span></span><span class="num">${fmt(v)}</span>`;
+  el.innerHTML = `
+    <div class="head"><div><div class="eyebrow">อ.${p.amphoe} · ${p.pcode}</div><h2>ต.${p.tambon}</h2></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><span class="muted" style="font-size:.75rem">แนวโน้ม ธ.ค.</span>${pill(p.alert_dec)}</div></div>
+    <div class="action p${p.alert_dec}">${ALERT[p.alert_dec].act}</div>
+    <div class="bars">
+      <b style="grid-column:1/-1;font-size:.78rem" class="muted">ดัชนี: ล่าสุด → ธ.ค.</b>
+      ${bar("น้ำกิน-น้ำใช้ ล่าสุด", p.water_now)}${bar("น้ำกิน-น้ำใช้ ธ.ค.", p.water_dec)}
+      ${bar("เกษตร ล่าสุด", p.agri_now)}${bar("เกษตร ธ.ค.", p.agri_dec)}
+    </div>
+    <div class="kv">
+      <div><small>SPI-3</small><span class="num">${fmt(p.spi3_now)}</span></div>
+      <div><small>ความชื้นดิน (z)</small><span class="num">${fmt(p.sm_z_now)}</span></div>
+      <div><small>VHI</small><span class="num">${fmt(p.vhi_now,0)}</span></div>
+      <div><small>น้ำผิวดิน (z)</small><span class="num">${fmt(p.water_z_now)}</span></div>
+      <div><small>หมู่บ้านเคยประกาศภัย (2562 / 2563)</small><span class="num">${p.moo_2562} / ${p.moo_2563}</span></div>
+      <div><small>ประชากรโดยประมาณ</small><span class="num">${p.pop_2020 ? Math.round(p.pop_2020).toLocaleString("th-TH") : "–"}</span></div>
+    </div>
+    <div><div class="eyebrow" style="margin-bottom:4px">ดัชนีรายเดือน 2561–ปัจจุบัน</div><div class="chartbox"><canvas id="ts-chart" aria-label="กราฟดัชนีรายเดือน"></canvas></div></div>`;
+  if (chart) chart.destroy();
+  if (!s) return;
+  const i19 = s.dates.indexOf("2019-10"), i20 = s.dates.indexOf("2020-06");
+  const band = {id:"band", beforeDraw(c){ if(i19<0) return; const {ctx,chartArea:a,scales:{x}}=c;
+    ctx.save(); ctx.fillStyle=css("--accent-soft"); const x0=x.getPixelForValue(i19), x1=x.getPixelForValue(i20<0?s.dates.length-1:i20);
+    ctx.fillRect(x0,a.top,x1-x0,a.bottom-a.top); ctx.fillStyle=css("--muted"); ctx.font="11px "+css("--mono"); ctx.fillText("2562–63",x0+4,a.top+12); ctx.restore(); }};
+  chart = new Chart(document.getElementById("ts-chart"), {
+    type: "line", plugins:[band],
+    data: {labels: s.dates, datasets: [
+      {label:"น้ำกิน-น้ำใช้", data:s.water_index, borderColor:css("--accent"), backgroundColor:css("--accent"), pointRadius:0, borderWidth:2, tension:.25},
+      {label:"เกษตร", data:s.agri_index, borderColor:css("--a2"), backgroundColor:css("--a2"), pointRadius:0, borderWidth:2, tension:.25}]},
+    options: {responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:"index",intersect:false},
+      plugins:{legend:{labels:{color:css("--fg"),boxWidth:10,font:{size:11}}}},
+      scales:{x:{ticks:{color:css("--muted"),maxTicksLimit:6,font:{size:10}},grid:{display:false}},
+              y:{min:0,max:1,ticks:{color:css("--muted"),stepSize:.25,font:{size:10}},grid:{color:css("--line")}}}}
+  });
+}
+
+function renderTable() {
+  const am = document.getElementById("f-amphoe").value, q = document.getElementById("f-q").value.trim();
+  const rows = geo.features.map(f=>f.properties)
+    .filter(p => (!am || p.amphoe === am) && (!q || p.tambon.includes(q)))
+    .sort((a,b) => b.alert_dec - a.alert_dec || (b.water_dec||0) - (a.water_dec||0));
+  document.getElementById("f-count").textContent = `${rows.length} ตำบล`;
+  document.getElementById("tbody").innerHTML = rows.map(p => `<tr data-pc="${p.pcode}" tabindex="0" class="${p.pcode===selected?"sel":""}">
+    <td>${p.tambon}</td><td>${p.amphoe}</td><td>${pill(p.alert_dec)}</td><td>${ALERT[p.alert_dec].act}</td>
+    <td class="n">${fmt(p.water_dec)}</td><td class="n">${fmt(p.agri_dec)}</td><td class="n">${p.moo_total}</td>
+    <td class="n">${p.pop_2020 ? Math.round(p.pop_2020).toLocaleString("th-TH") : "–"}</td></tr>`).join("");
+}
+
+async function init() {
+  const get = u => fetch(u).then(r => { if (!r.ok) throw new Error(u); return r.json(); });
+  [geo, ts, meta] = await Promise.all([get("data/tambons.geojson"), get("data/timeseries.json"), get("data/meta.json")]);
+  geo.features.forEach(f => byPc[f.properties.pcode] = f.properties);
+  document.getElementById("mockbar").hidden = !meta.mock;
+  const [y,m] = meta.now_month.split("-");
+  const TH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+  document.getElementById("m-now").textContent = `${TH[+m-1]} ${+y+543}`;
+  document.getElementById("m-gen").textContent = "ประมวลผล " + meta.generated;
+  const cnt = [0,1,2,3].map(a => geo.features.filter(f=>f.properties.alert_dec===a).length);
+  document.getElementById("counts").innerHTML = [3,2,1,0].map(a => `${pill(a)}<b class="num" style="margin-right:8px">${cnt[a]}</b>`).join("");
+
+  const lay = document.getElementById("layers");
+  LAYERS.forEach(L => { if (L.sep) { lay.insertAdjacentHTML("beforeend",'<span class="sep"></span>'); return; }
+    const b = document.createElement("button"); b.type="button"; b.dataset.id=L.id; b.textContent=L.label; b.onclick=()=>setLayer(L); lay.appendChild(b); });
+
+  map = L.map("map", {attributionControl:false, zoomSnap:.25, scrollWheelZoom:false});
+  gLayer = L.geoJSON(geo, {style, onEachFeature:(f,l) => {
+    l.bindTooltip(() => { const p=f.properties, v=p[current.id];
+      return `<b>ต.${p.tambon}</b> อ.${p.amphoe}<br>${current.type==="alert" ? ALERT[v].t : current.label+": "+fmt(v, current.id==="vhi_now"||current.id==="moo_total"?0:2)}`; }, {sticky:true});
+    l.on("click", () => showDetail(f.properties.pcode)); }}).addTo(map);
+  map.fitBounds(gLayer.getBounds(), {padding:[8,8]});
+  new ResizeObserver(() => map.invalidateSize()).observe(document.getElementById("map"));
+  setLayer(LAYERS[0]);
+
+  const sel = document.getElementById("f-amphoe");
+  [...new Set(geo.features.map(f=>f.properties.amphoe))].sort((a,b)=>a.localeCompare(b,"th")).forEach(a => sel.add(new Option(a,a)));
+  sel.onchange = renderTable; document.getElementById("f-q").oninput = renderTable;
+  const tb = document.getElementById("tbody");
+  tb.onclick = e => { const r = e.target.closest("tr"); if (r) showDetail(r.dataset.pc); };
+  tb.onkeydown = e => { if (e.key === "Enter") { const r = e.target.closest("tr"); if (r) showDetail(r.dataset.pc); } };
+  renderTable();
+  const top = geo.features.map(f=>f.properties).sort((a,b)=>b.alert_dec-a.alert_dec||(b.water_dec||0)-(a.water_dec||0))[0];
+  showDetail(top.pcode);
+}
+init().catch(e => { document.getElementById("detail").innerHTML = `<div class="empty">โหลดข้อมูลไม่สำเร็จ (${e.message}) ตรวจว่าโฟลเดอร์ data/ อยู่คู่กับ index.html</div>`; });
+</script>
