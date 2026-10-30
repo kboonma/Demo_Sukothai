@@ -1,40 +1,60 @@
+<meta charset="utf-8">
 <title>Sukhothai Drought Watch</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: status strip -> map + tambon panel -> priority table -> 2019 analog -> method. Water-blue accent on mineral greys; alert colours are semantic only. */
 :root{
-  --bg:#f3f5f5; --surface:#ffffff; --line:#d5dcdc; --fg:#17201f; --muted:#5b6866;
+  --bg:#eef2f1; --bg2:#f6f8f7; --surface:#ffffff; --line:#dde4e3; --fg:#152221; --muted:#5b6866;
+  --ink:#0d3438; --ink2:#14525a; --on-ink:#f2f7f6; --on-ink-muted:#a9c7c8; --on-ink-accent:#8fd6df;
+  --shadow:0 1px 2px rgb(13 52 56 / .06), 0 8px 24px rgb(13 52 56 / .07);
   --accent:#0b6e82; --accent-soft:#dcedf0;
   --a0:#e3e8e6; --a1:#f0c93a; --a2:#ea7d1f; --a3:#c23a2c;
   --a1-ink:#5c4700; --a2-ink:#6b3300; --a3-ink:#ffffff;
-  --mock:#fff3cd; --mock-ink:#5c4700;
-  --display:"Anuphan","IBM Plex Sans Thai",system-ui,sans-serif;
-  --body:"IBM Plex Sans Thai",system-ui,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --mock:#fff3cd; --mock-ink:#5c4700; --edge:#ffffff;
+  --a1-soft:#fbf3d4; --a2-soft:#fbe8d8; --a3-soft:#f7e0dc;
+  --display:"Kanit","Leelawadee UI","Thonburi",system-ui,sans-serif;
+  --body:"Kanit","Leelawadee UI","Thonburi",system-ui,sans-serif;
+  --mono:"IBM Plex Mono","Kanit",ui-monospace,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#111716; --surface:#19211f; --line:#2c3735; --fg:#e4ebe9; --muted:#9aa8a5;
-  --accent:#5cc2d6; --accent-soft:#16343a; --a0:#2a3331; --mock:#3a3112; --mock-ink:#f3dc8a; color-scheme:dark}}
+  --bg:#0e1413; --bg2:#111917; --ink:#0f2a2d; --ink2:#14393e; --shadow:0 0 0 1px #24302e; --surface:#172020; --line:#26312f; --fg:#e4ebe9; --muted:#9aa8a5;
+  --accent:#5cc2d6; --accent-soft:#16343a; --a0:#2a3331; --mock:#3a3112; --mock-ink:#f3dc8a; --edge:#19211f; --a1-soft:#33301a; --a2-soft:#3a2a1c; --a3-soft:#3b2220; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#111716; --surface:#19211f; --line:#2c3735; --fg:#e4ebe9; --muted:#9aa8a5;
-  --accent:#5cc2d6; --accent-soft:#16343a; --a0:#2a3331; --mock:#3a3112; --mock-ink:#f3dc8a; color-scheme:dark}
+  --bg:#0e1413; --bg2:#111917; --ink:#0f2a2d; --ink2:#14393e; --shadow:0 0 0 1px #24302e; --surface:#172020; --line:#26312f; --fg:#e4ebe9; --muted:#9aa8a5;
+  --accent:#5cc2d6; --accent-soft:#16343a; --a0:#2a3331; --mock:#3a3112; --mock-ink:#f3dc8a; --edge:#19211f; --a1-soft:#33301a; --a2-soft:#3a2a1c; --a3-soft:#3b2220; color-scheme:dark}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--body);
+body{background:linear-gradient(180deg,var(--bg) 0,var(--bg2) 520px) var(--bg2);color:var(--fg);font:300 15px/1.65 var(--body);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
 .wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
-h1,h2,h3{font-family:var(--display);font-weight:600;margin:0;text-wrap:balance;line-height:1.25}
+h1,h2,h3{font-family:var(--display);font-weight:500;margin:0;text-wrap:balance;line-height:1.25}
 h1{font-size:1.75rem} h2{font-size:1.25rem} h3{font-size:1.05rem}
 .eyebrow{font:500 .75rem/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+b,strong{font-weight:500}
+.acard .lv{font-family:var(--body)!important;letter-spacing:0!important}
 .muted{color:var(--muted)}
 a{color:var(--accent)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-header{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between}
+header{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between;position:relative}
+.masthead{position:relative;overflow:hidden;border-radius:18px;padding:28px 28px 76px;color:var(--on-ink);
+  background:radial-gradient(120% 140% at 100% 0%,var(--ink2) 0,var(--ink) 60%);display:flex;flex-direction:column;gap:26px}
+@media (max-width:600px){.masthead{padding:22px 18px 64px}}
+.masthead .contours{position:absolute;right:-60px;top:-40px;height:150%;width:auto;color:var(--on-ink);opacity:.09;pointer-events:none}
+.masthead .eyebrow{color:var(--on-ink-accent)}
+.masthead h1{font-size:1.15rem;font-weight:500;color:var(--on-ink-muted)}
+.masthead .stat{background:rgb(255 255 255 / .07);border:1px solid rgb(255 255 255 / .14);color:var(--on-ink)}
+.masthead .stat span:last-child{color:var(--on-ink-muted);font-size:.8rem}
+.mh-brief{position:relative;display:flex;flex-direction:column;gap:10px}
+.masthead h2#headline{font-size:clamp(1.5rem,3.2vw,2.3rem);line-height:1.25;max-width:26ch;color:#fff}
+.masthead .sub{color:var(--on-ink-muted);max-width:72ch;margin:0}
+.lift{margin-top:-74px;padding:0 16px;position:relative}
+@media (max-width:600px){.lift{padding:0 8px}}
 .status{display:flex;flex-wrap:wrap;gap:12px}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-width:120px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:120px}
 .stat b{display:block;font:500 1.1rem var(--mono)}
 .mock{background:var(--mock);color:var(--mock-ink);border-radius:8px;padding:10px 14px;font-size:.9rem}
 
@@ -46,12 +66,12 @@ header{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-co
 
 .main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px}
 @media (max-width:860px){.main{grid-template-columns:1fr}}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.panel{background:var(--surface);border-radius:14px;padding:18px;min-width:0;box-shadow:var(--shadow)}
 .layers{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
 .layers button{font:500 .82rem var(--body);border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:5px 10px;cursor:pointer}
 .layers button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
 .layers .sep{width:1px;background:var(--line);margin:0 4px}
-#map{height:560px;border-radius:8px;background:var(--bg)}
+#map{height:580px;border-radius:8px;background:var(--bg)}
 @media (max-width:860px){#map{height:440px}}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-top:10px;font-size:.82rem;color:var(--muted)}
 .ramp{height:10px;width:160px;border-radius:3px}
@@ -91,6 +111,68 @@ tbody tr{cursor:pointer} tbody tr:hover,tbody tr.sel{background:var(--accent-sof
 .cols ul{margin:6px 0 0;padding-left:18px} .cols li{margin:3px 0}
 footer{font-size:.8rem;color:var(--muted)}
 
+.brief{display:flex;flex-direction:column;gap:14px}
+.brief h2#headline{font-size:1.6rem;line-height:1.3;max-width:34ch}
+.brief .sub{color:var(--muted);max-width:75ch;margin:0}
+.actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:860px){.actions{grid-template-columns:1fr}}
+.acard{border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;min-width:0;background:var(--surface);box-shadow:var(--shadow)}
+.acard .top{display:flex;align-items:center;gap:12px}
+.acard .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:none}
+.acard .ic svg{width:24px;height:24px}
+.acard.l3{background:var(--a3-soft);box-shadow:var(--shadow),inset 0 0 0 1px color-mix(in srgb,var(--a3) 35%,transparent)}
+.acard.l2{background:var(--a2-soft);box-shadow:var(--shadow),inset 0 0 0 1px color-mix(in srgb,var(--a2) 35%,transparent)}
+.acard.l1{background:var(--a1-soft);box-shadow:var(--shadow),inset 0 0 0 1px color-mix(in srgb,var(--a1) 55%,transparent)}
+.acard.l3 .ic{background:var(--a3);color:#fff} .acard.l2 .ic{background:var(--a2);color:#fff} .acard.l1 .ic{background:var(--a1);color:var(--a1-ink)}
+.acard .lv{display:inline-block;font:600 .72rem var(--mono);letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:2px 8px;margin-left:auto;align-self:flex-start}
+.acard.l3 .lv{background:var(--a3);color:#fff} .acard.l2 .lv{background:var(--a2);color:#fff} .acard.l1 .lv{background:var(--a1);color:var(--a1-ink)}
+.acard .chip{background:var(--surface)}
+.acard .n{font:600 2.4rem/1 var(--display);font-variant-numeric:tabular-nums}
+.acard.l3 .n{color:var(--a3)} .acard.l2 .n{color:var(--a2)} .acard.l1 .n{color:#9a7b00}
+:root[data-theme="dark"] .acard.l1 .n{color:var(--a1)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .acard.l1 .n{color:var(--a1)}}
+.acard .lbl{font:600 1.05rem var(--display)}
+.acard ul{margin:0;padding-left:18px;font-size:.9rem}
+.acard .zero{color:var(--muted);font-size:.9rem}
+.acard .now{font-size:.85rem;border-top:1px dashed var(--line);padding-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:.8rem;white-space:nowrap}
+.exec{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px}
+@media (max-width:860px){.exec{grid-template-columns:1fr}}
+
+.amtable td.n{text-align:right}
+.amtable th,.amtable td{padding:7px 8px}
+.amtable td:first-child{white-space:normal}
+.amtable .note{display:block;font-size:.76rem;color:var(--a2)}
+.amtable td.z{color:var(--muted)}
+.divider{display:flex;align-items:center;gap:14px;margin-top:18px}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+.divider span{font:500 .8rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.timebar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:10px;padding:10px 12px;background:var(--bg);border-radius:8px}
+.timebar input[type=range]{flex:1 1 220px;min-width:0;accent-color:var(--accent)}
+.timebar #t-label{font:600 .95rem var(--display);min-width:9em}
+.timebar .quick{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+.timebar .quick button{font:500 .8rem var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:3px 10px;cursor:pointer}
+.timebar .quick button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+#histflag{font-size:.85rem;margin:-2px 0 8px;color:var(--a3)}
+.maptools{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.ovl{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 8px;font-size:.88rem}
+.ovl label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.ovl label.na{color:var(--muted);cursor:default}
+.ovl small{color:var(--muted)}
+.maptools summary{cursor:pointer;font:500 .9rem var(--body);color:var(--accent)}
+.maptools[open] summary{margin-bottom:10px}
+.backlink{font:500 .85rem var(--body);color:var(--accent);background:none;border:0;padding:0;cursor:pointer;align-self:flex-start}
+details.panel summary{cursor:pointer;font:600 1.1rem var(--display)}
+details.panel[open] summary{margin-bottom:10px}
+
+#map{background:radial-gradient(80% 70% at 50% 45%,var(--surface) 0,var(--bg2) 100%);box-shadow:inset 0 0 0 1px var(--line)}
+#map .leaflet-overlay-pane svg{filter:drop-shadow(0 10px 16px rgb(13 52 56 / .20))}
+.legend .tag{background:var(--bg2);border-radius:999px;padding:2px 10px 2px 6px}
+.legend .sw{border-radius:50%}
+tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg2) 70%,transparent)}
+th{text-transform:none;letter-spacing:.02em}
+
 /* Leaflet essentials (stylesheet inlined) */
 .leaflet-pane,.leaflet-layer,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box{position:absolute;left:0;top:0}
 .leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent;font:inherit;touch-action:none}
@@ -108,41 +190,86 @@ footer{font-size:.8rem;color:var(--muted)}
 </style>
 
 <div class="wrap">
-  <header>
-    <div>
-      <div class="eyebrow">จังหวัดสุโขทัย · 86 ตำบล · ต้นแบบ</div>
-      <h1>เฝ้าระวังภัยแล้งรายตำบล ฤดูแล้ง 2569/70</h1>
-    </div>
-    <div class="status">
-      <div class="stat"><span class="eyebrow">ENSO ต.ค. 2569</span><b>Niño 3.4 +3.3°C</b><span class="muted" style="font-size:.8rem">El Niño แรงมาก</span></div>
-      <div class="stat"><span class="eyebrow">ข้อมูลล่าสุด</span><b id="m-now">–</b><span class="muted" style="font-size:.8rem" id="m-gen"></span></div>
-    </div>
-  </header>
-
-  <div class="mock" id="notebar" hidden></div>
-  <div class="mock" id="mockbar" hidden><b>ข้อมูลดัชนีบนหน้านี้เป็นข้อมูลจำลอง</b> ใช้เพื่อแสดงรูปแบบ dashboard เท่านั้น ชั้น "ประวัติประกาศภัย ปภ." เป็นข้อมูลจริง ส่วนดัชนีจะถูกแทนด้วยค่าจากดาวเทียมเมื่อประมวลผลเสร็จ</div>
-
-  <section class="panel">
-    <div style="display:flex;flex-wrap:wrap;gap:10px 20px;justify-content:space-between;align-items:center">
-      <h2>แนวโน้มเดือนธันวาคม: ตำบลแยกตามระดับเตือน</h2>
-      <div class="counts" id="counts"></div>
+  <section class="masthead" aria-labelledby="headline">
+    <svg class="contours" viewBox="0 0 600 400" aria-hidden="true" preserveAspectRatio="xMaxYMid slice">
+      <g fill="none" stroke="currentColor" stroke-width="1">
+        <path d="M420 200c0-60 40-110 100-110s90 50 90 110-40 105-95 105-95-45-95-105z"/>
+        <path d="M380 200c0-85 60-150 140-150s130 70 130 150-60 145-135 145-135-65-135-145z"/>
+        <path d="M340 205c0-110 80-190 180-190s170 90 170 190-80 185-175 185-175-85-175-185z"/>
+        <path d="M300 210c0-135 100-230 220-230s210 110 210 230-100 225-215 225-215-100-215-225z"/>
+        <path d="M260 215c0-160 120-270 260-270s250 130 250 270-120 265-255 265-255-120-255-265z"/>
+        <path d="M220 220c0-185 140-310 300-310s290 150 290 310-140 305-295 305-295-140-295-305z"/>
+        <path d="M180 225c0-210 160-350 340-350s330 170 330 350-160 345-335 345-335-160-335-345z"/>
+      </g>
+    </svg>
+    <header>
+      <div>
+        <div class="eyebrow">จังหวัดสุโขทัย · 86 ตำบล · ข้อมูลถึง <span id="m-now">–</span> · ต้นแบบ</div>
+        <h1>ภัยแล้งรายตำบล: ต้องเตรียมอะไร ที่ไหน</h1>
+      </div>
+      <div class="status">
+        <div class="stat"><span class="eyebrow">ENSO ต.ค. 2569</span><b>Niño 3.4 +3.3°C</b><span>El Niño แรงมาก</span></div>
+      </div>
+    </header>
+    <div class="mh-brief">
+      <div class="eyebrow">สรุปสำหรับผู้บริหาร · สถานการณ์ล่าสุด</div>
+      <h2 id="headline">กำลังโหลดข้อมูล…</h2>
+      <p class="sub" id="subline"></p>
     </div>
   </section>
 
-  <div class="main">
+  <div class="actions lift">
+    <div class="acard l3" id="act3"></div>
+    <div class="acard l2" id="act2"></div>
+    <div class="acard l1" id="act1"></div>
+  </div>
+
+  <div class="mock" id="mockbar" hidden><b>ข้อมูลดัชนีบนหน้านี้เป็นข้อมูลจำลอง</b> ใช้เพื่อแสดงรูปแบบ dashboard เท่านั้น</div>
+
+  <div class="exec">
     <section class="panel">
-      <div class="layers" id="layers" role="group" aria-label="ชั้นข้อมูลแผนที่"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between;margin-bottom:8px">
+        <h2 id="map-title">แผนที่ระดับเตือนรายตำบล</h2>
+        <span class="muted" style="font-size:.85rem">คลิกตำบลเพื่อดูรายละเอียด</span>
+      </div>
+      <div id="histflag" hidden></div>
       <div id="map" role="img" aria-label="แผนที่ตำบลจังหวัดสุโขทัย"></div>
       <div class="legend" id="legend"></div>
       <div class="layer-note" id="layernote"></div>
+      <details class="maptools" id="maptools">
+        <summary>ชั้นข้อมูลอื่น ซ้อนทับ และดูย้อนหลัง</summary>
+        <div class="ovl" id="overlays" role="group" aria-label="ชั้นข้อมูลซ้อนทับ"></div>
+        <div class="legend" id="ovlegend" hidden></div>
+        <div class="layers" id="layers" role="group" aria-label="ชั้นข้อมูลแผนที่"></div>
+        <div class="timebar">
+          <label for="t-slider" class="muted">ดูย้อนหลัง</label>
+          <input type="range" id="t-slider" min="0" max="0" step="1" value="0">
+          <span id="t-label">เดือนล่าสุด</span>
+          <div class="quick" id="t-quick" role="group" aria-label="เดือนสำคัญ"></div>
+        </div>
+      </details>
     </section>
-    <aside class="panel detail" id="detail" aria-live="polite">
-      <div class="empty">คลิกตำบลบนแผนที่หรือในตาราง เพื่อดูรายละเอียด</div>
+    <aside class="panel" id="side" aria-live="polite">
+      <div id="amview">
+      <h2 style="margin-bottom:8px">อำเภอที่ต้องประสาน</h2>
+      <div class="tablebox" style="max-height:none">
+        <table class="amtable">
+          <thead><tr><th>อำเภอ</th><th style="text-align:right">แจกจ่ายน้ำ</th><th style="text-align:right">เตือนเกษตร</th><th style="text-align:right">เฝ้าระวัง</th><th style="text-align:right">ประชากร</th><th style="text-align:right" title="หมู่บ้านที่ ปภ. ประเมินว่าภัยแล้งกระทบน้ำดื่ม ในตำบลที่มีระดับเตือน">หมู่บ้านกระทบน้ำดื่ม</th></tr></thead>
+          <tbody id="ambody"></tbody>
+        </table>
+      </div>
+      <p class="muted" style="font-size:.85rem;margin:12px 0 0">ระดับเตือนจากข้อมูลเดือนล่าสุด · ประชากร = รวมในตำบลที่มีระดับเตือน · คลิกตำบลบนแผนที่เพื่อดูรายละเอียดด้านล่าง</p>
+      <div class="mock" style="margin-top:12px" id="nextstep"></div>
+      </div>
+      <div class="detail" id="detail" hidden></div>
     </aside>
   </div>
 
+  <div class="divider"><span>รายละเอียดสำหรับทีมวิเคราะห์</span></div>
+  <div class="mock" id="notebar" hidden></div>
+
   <section class="panel">
-    <h2>ลำดับความสำคัญรายตำบล</h2>
+    <h2>รายชื่อตำบลทั้งหมด</h2>
     <div class="tools">
       <label for="f-amphoe" class="muted">อำเภอ</label>
       <select id="f-amphoe"><option value="">ทุกอำเภอ</option></select>
@@ -152,7 +279,7 @@ footer{font-size:.8rem;color:var(--muted)}
     </div>
     <div class="tablebox">
       <table>
-        <thead><tr><th>ตำบล</th><th>อำเภอ</th><th>ระดับ ธ.ค.</th><th>สิ่งที่ควรเตรียม</th><th>แล้งเกษตร ธ.ค.</th><th>ภัยขาดน้ำ ธ.ค.</th><th>ปีที่เคยแล้ง (8 ปี)</th><th>ประชากร</th></tr></thead>
+        <thead><tr><th>ตำบล</th><th>อำเภอ</th><th>ระดับเตือน (ล่าสุด)</th><th>สิ่งที่ควรเตรียม</th><th id="th-fc">คาดการณ์ +1 / +2 เดือน</th><th>แล้งเกษตร</th><th>ภัยขาดน้ำ</th><th>ปีที่เคยแล้ง (8 ปี)</th><th>ประชากร</th></tr></thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
@@ -170,7 +297,9 @@ footer{font-size:.8rem;color:var(--muted)}
     </div>
   </section>
 
-  <section class="panel cols">
+  <details class="panel">
+    <summary>วิธีคิดระดับเตือนและแหล่งข้อมูล</summary>
+    <div class="cols">
     <div>
       <h2>วิธีคิดระดับเตือน</h2>
       <ul>
@@ -178,7 +307,7 @@ footer{font-size:.8rem;color:var(--muted)}
         <li><b>ภัยขาดน้ำกิน-น้ำใช้</b> นับสัญญาณที่ต่ำกว่าปกติ ≤ −1: SPI-6, ความชื้นดินชั้นล่าง และพื้นที่แหล่งน้ำ (เมื่อมีข้อมูล Sentinel-2 เฉพาะแหล่งน้ำ) · 1 สัญญาณ = ปานกลาง, 2+ = สูง</li>
         <li><b>ความเปราะบาง</b> จำนวนปีที่มีหมู่บ้านอยู่ในพื้นที่ภัยแล้งตามข้อมูล ปภ. 2560–2567</li>
         <li><b>ระดับเตือน</b> ใช้ตารางภัย × ความเปราะบาง: <span class="pill p3">เตรียมแจกจ่ายน้ำ</span> ภัยสูง และเคยแล้ง ≥ 1 ปี · <span class="pill p2">เตือนเกษตร</span> CDI ระดับ Warning ขึ้นไป และมีพื้นที่เพาะปลูก ≥ 10% · <span class="pill p1">เฝ้าระวัง</span> CDI Watch, ภัยสูงในตำบลที่ไม่เคยแล้ง หรือภัยปานกลางในตำบลที่เคยแล้ง</li>
-        <li><b>แนวโน้ม ธ.ค.</b> ค่าผิดปกติแต่ละตัว = ครึ่งหนึ่งจากสภาพล่าสุด อีกครึ่งจากค่าเดือน ธ.ค. ในปี El Niño 2558, 2562, 2566</li>
+        <li><b>คาดการณ์ระยะสั้น</b> 1 และ 2 เดือนข้างหน้า: ค่าผิดปกติแต่ละตัว = สภาพล่าสุด (น้ำหนัก 0.7 และ 0.5) ผสมกับค่าเดือนเดียวกันในปี El Niño 2558, 2562, 2566 ใช้ดูทิศทาง ไม่ใช่การพยากรณ์อากาศ</li>
         <li><b>ทดสอบย้อนหลัง</b> ฤดูแล้ง 2562/63 ตำบล 84% อยู่ระดับ Warning ขึ้นไป ขณะที่ปีอื่นตั้งแต่ 2561 ไม่เกิน 7% รวมถึงปี El Niño 2566/67 ที่ไม่มีการประกาศภัย · การระบุว่า "ตำบลไหน" ยังพึ่งข้อมูลความเปราะบางเป็นหลัก</li>
       </ul>
     </div>
@@ -190,11 +319,15 @@ footer{font-size:.8rem;color:var(--muted)}
         <li>สุขภาพพืช: MODIS NDVI + อุณหภูมิผิวดิน → VHI</li>
         <li>แหล่งน้ำผิวดิน: Sentinel-2 (2560–ปัจจุบัน)</li>
         <li>ประวัติภัย: ปภ. dpm-gd016 หมู่บ้านในพื้นที่ภัยแล้ง 2560–2567 และ dpm-gd028 ประกาศเขตภัย ปีงบ 2562–2568</li>
+        <li>ความเสี่ยงภัยแล้งรายหมู่บ้าน 866 หมู่บ้าน (ระดับความเสี่ยง, ผลกระทบน้ำดื่ม/น้ำเกษตร): ปภ. บริการ drought_region (gis-portal.disaster.go.th, CC-BY)</li>
+        <li>เขตชลประทาน: รอข้อมูลทางการจากกรมชลประทาน · ระหว่างนี้ใช้ค่าประมาณจากพื้นที่เกษตรที่ยังเขียวในฤดูแล้ง (MODIS) ได้ · ตำบลที่พื้นที่เกษตร ≥ 50% อยู่ในเขตชลประทาน ต้องมีแล้งเกษตรสูงขึ้นอีกหนึ่งขั้นจึงจะเตือนเกษตร</li>
+        <li>แม่น้ำ: HydroSHEDS ผ่าน Earth Engine · อ่างเก็บน้ำ: ข้อมูลจากโครงการชลประทานสุโขทัย (ช่องรับข้อมูล intake/)</li>
         <li>ขอบเขตตำบล: กรมแผนที่ทหาร ผ่าน HDX COD-AB</li>
         <li>ประชากร: WorldPop 2020 · การใช้ที่ดิน: ESA WorldCover</li>
       </ul>
     </div>
-  </section>
+    </div>
+  </details>
   <footer>ต้นแบบเพื่อนำเสนอแนวคิด ยังไม่ใช่ข้อมูลทางการ · ไฟล์ข้อมูลอยู่ในโฟลเดอร์ data/ ของ repository</footer>
 </div>
 
@@ -216,17 +349,18 @@ const SEQ = ["#fbf3d5","#f3c56b","#e07a2f","#a8321f","#5e1a12"];
 const DIV = ["#8c4a16","#d9a35c","#efe9dc","#6fb3c9","#1f5f8b"];   // dry -> wet
 const NA = "#9aa3a1";
 const CATS = {
-  CDI: {labels:["ปกติ","Watch: ฝนขาด","Warning: ดินแห้ง","Alert: พืชเครียด"], colors:["#e3e8e6","#f3c56b","#e07a2f","#a8321f"]},
-  HAZ: {labels:["ไม่มีสัญญาณ","ปานกลาง (1 สัญญาณ)","สูง (2+ สัญญาณ)"], colors:["#e3e8e6","#6fb3c9","#1f5f8b"]},
-  VUL: {labels:["ไม่เคย","1 ปี","2–3 ปี"], colors:["#e3e8e6","#c9a9d6","#6b3f8a"]}
+  CDI: {labels:["ปกติ","Watch: ฝนขาด","Warning: ดินแห้ง","Alert: พืชเครียด"], colors:["#b9dcb0","#f3c56b","#e07a2f","#a8321f"]},
+  HAZ: {labels:["ไม่มีสัญญาณ","ปานกลาง (1 สัญญาณ)","สูง (2+ สัญญาณ)"], colors:["#b9dcb0","#6fb3c9","#1f5f8b"]},
+  VUL: {labels:["ไม่เคย","1 ปี","2–3 ปี"], colors:["#b9dcb0","#c9a9d6","#6b3f8a"]}
 };
 
 const LAYERS = [
-  {id:"alert_dec", label:"แนวโน้ม ธ.ค.", type:"alert", note:"ระดับเตือนที่คาดการณ์สำหรับเดือนธันวาคม"},
-  {id:"alert_now", label:"สภาพล่าสุด", type:"alert", note:"ระดับเตือนจากข้อมูลเดือนล่าสุด"},
+  {id:"alert_now", label:"ระดับเตือน", type:"alert", note:"ระดับเตือนจากข้อมูลเดือนล่าสุด (ใช้บนการ์ดด้านบน)"},
+  {id:"alert_f1", label:"คาดการณ์ {f1}", type:"alert", note:"ระดับเตือนคาดการณ์ 1 เดือนข้างหน้า ({f1}) ความแม่นยำต่ำกว่าข้อมูลจริง"},
+  {id:"alert_f2", label:"คาดการณ์ {f2}", type:"alert", note:"ระดับเตือนคาดการณ์ 2 เดือนข้างหน้า ({f2}) ใช้ดูทิศทางเท่านั้น"},
   {sep:true},
-  {id:"agri_dec", label:"แล้งเกษตร (CDI)", type:"cat", cats:"CDI", note:"ระดับแล้งเกษตรแบบขั้นบันได CDI แนวโน้ม ธ.ค."},
-  {id:"haz_dec", label:"ภัยขาดน้ำ", type:"cat", cats:"HAZ", note:"จำนวนสัญญาณขาดน้ำ (SPI-6, ความชื้นดินชั้นล่าง, แหล่งน้ำ) แนวโน้ม ธ.ค."},
+  {id:"agri_now", label:"แล้งเกษตร (CDI)", type:"cat", cats:"CDI", note:"ระดับแล้งเกษตรแบบขั้นบันได CDI เดือนล่าสุด"},
+  {id:"haz_now", label:"ภัยขาดน้ำ", type:"cat", cats:"HAZ", note:"จำนวนสัญญาณขาดน้ำ (SPI-6, ความชื้นดินชั้นล่าง, แหล่งน้ำ) เดือนล่าสุด"},
   {id:"vuln", label:"ประวัติ ปภ. 8 ปี", type:"cat", cats:"VUL", real:true, note:"จำนวนปีที่มีหมู่บ้านอยู่ในพื้นที่ภัยแล้ง 2560–2567 (ปภ. ข้อมูลจริง)"},
   {sep:true},
   {id:"spi3_now", label:"SPI-3", type:"div", lo:-2, hi:2, note:"ฝนสะสม 3 เดือน เทียบค่าปกติ (ติดลบ = แล้ง)"},
@@ -238,8 +372,24 @@ const LAYERS = [
 let geo, ts, meta, map, gLayer, chart, current = LAYERS[0], selected = null;
 const byPc = {};
 
+let histIdx = null, DATES = [], FM = ["+1 เดือน", "+2 เดือน"];
+const TH_M = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const monthTH = d => { const [y, m] = d.split("-"); return `${TH_M[+m - 1]} ${+y + 543}`; };
+const HIST = {alert_now: "__alert", alert_f1: "__alert", alert_f2: "__alert", agri_now: "agri_level", haz_now: "water_haz",
+  spi3_now: "spi3", sm_z_now: "sm_z", veg_z_now: "veg_z", water_z_now: "water_z"};
+const WM = {"0,0":0, "0,1":0, "0,2":1, "1,0":0, "1,1":1, "1,2":3, "2,0":1, "2,1":1, "2,2":3};
+function alertAt(a, h, v, c) { const w = WM[v + "," + h]; if (w === 3) return 3; if (a >= 2 && c >= 0.10) return 2; if (a >= 1 || w === 1) return 1; return 0; }
+function val(p, L) {
+  if (histIdx == null) return p[L.id];
+  let key = HIST[L.id];
+  if (!key && L.id.startsWith("ext_")) key = L.id.replace(/_(now|dec)$/, "");
+  if (!key) return p[L.id];                       // static layers (history of DDPM) do not change by month
+  const s = ts[p.pcode]; if (!s) return null;
+  if (key === "__alert") return s.agri_level ? alertAt(s.agri_level[histIdx], s.water_haz[histIdx], p.vuln || 0, p.crop_frac || 0) : null;
+  return s[key] ? s[key][histIdx] : null;
+}
 function colorFor(p, L) {
-  const v = p[L.id];
+  const v = val(p, L);
   if (v == null) return NA;
   if (L.type === "alert") return aColor(v);
   if (L.type === "cat") return CATS[L.cats].colors[v] || NA;
@@ -247,58 +397,140 @@ function colorFor(p, L) {
   return L.type === "seq" ? ramp(SEQ, t) : ramp(DIV, t);
 }
 function style(f) {
-  const sel = selected === f.properties.pcode;
-  return {fillColor: colorFor(f.properties, current), fillOpacity: .88,
-          color: sel ? css("--fg") : css("--surface"), weight: sel ? 2.5 : .8};
+  return {fillColor: colorFor(f.properties, current), fillOpacity: .82,
+          color: css("--edge"), weight: .6, opacity: 1, lineJoin: "round"};
+}
+let hoverLayer, selLayer;
+const byPcFeature = {};
+function drawSelection() {
+  selLayer.clearLayers();
+  if (selected && byPcFeature[selected]) selLayer.addData(byPcFeature[selected]);
 }
 const fmt = (v, d=2) => v == null ? "–" : Number(v).toFixed(d);
 const pill = a => `<span class="pill p${a}"><i style="background:currentColor;opacity:.6"></i>${ALERT[a].t}</span>`;
 
 function drawLegend() {
   const L = current, el = document.getElementById("legend");
-  if (L.type === "alert") el.innerHTML = ALERT.map((a,i)=>`<span class="tag"><span class="sw" style="background:${aColor(i)}"></span>${a.t}</span>`).join("");
+  if (L.type === "alert") { const c = [0,0,0,0]; geo.features.forEach(f => { const v = val(f.properties, L); if (v != null) c[v]++; });
+    el.innerHTML = [3,2,1,0].map(i=>`<span class="tag"><span class="sw" style="background:${aColor(i)}"></span>${ALERT[i].t} (${c[i]})</span>`).join(""); }
   else if (L.type === "cat") el.innerHTML = CATS[L.cats].labels.map((t,i)=>`<span class="tag"><span class="sw" style="background:${CATS[L.cats].colors[i]}"></span>${t}</span>`).join("");
   else {
     const st = L.type === "seq" ? SEQ : DIV;
     el.innerHTML = `<span class="num">${L.lo}</span><span class="ramp" style="background:linear-gradient(90deg,${st.join(",")})"></span><span class="num">${L.hi}</span>
       <span class="tag"><span class="sw" style="background:${NA}"></span>ไม่มีข้อมูล</span>`;
   }
-  document.getElementById("layernote").textContent = L.note + (meta.mock && !L.real ? " · ข้อมูลจำลอง" : "");
+  let extra = "";
+  if (L.type === "cat" || L.type === "alert") {
+    const vals = new Set(geo.features.map(f => val(f.properties, L)));
+    if (vals.size === 1) { const v = [...vals][0]; extra = ` · ทั้ง 86 ตำบลอยู่ระดับเดียวกัน: ${L.type === "cat" ? CATS[L.cats].labels[v] : ALERT[v].t}`; }
+  }
+  document.getElementById("layernote").textContent = L.note + extra + (meta.mock && !L.real ? " · ข้อมูลจำลอง" : "");
+}
+function setMonth(i) {
+  histIdx = (i == null || i >= DATES.length) ? null : i;
+  const sl = document.getElementById("t-slider"); sl.value = histIdx == null ? DATES.length : histIdx;
+  const lab = histIdx == null ? "เดือนล่าสุด" : monthTH(DATES[histIdx]);
+  document.getElementById("t-label").textContent = lab;
+  sl.setAttribute("aria-valuetext", lab);
+  const fl = document.getElementById("histflag");
+  fl.hidden = histIdx == null;
+  fl.textContent = histIdx == null ? "" : `กำลังดูข้อมูลย้อนหลัง ${lab}: ชั้น "ล่าสุด" และ "คาดการณ์" แสดงค่าจริงของเดือนนี้ ระดับเตือนคำนวณด้วยเกณฑ์เดียวกับปัจจุบัน`;
+  document.querySelectorAll("#t-quick button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.i === "now" && histIdx == null) || +b.dataset.i === histIdx)));
+  gLayer.setStyle(style); drawLegend(); mapTitle();
+  if (chart) chart.update("none");
+}
+function mapTitle() {
+  const t = document.getElementById("map-title"); if (!t || !current) return;
+  t.textContent = current.label + (histIdx != null ? ` · ${monthTH(DATES[histIdx])}` : (current.id === "alert_now" ? ` · ${FM.now || ""}` : ""));
 }
 function setLayer(L) {
   current = L;
   document.querySelectorAll("#layers button").forEach(b => b.setAttribute("aria-pressed", b.dataset.id === L.id));
-  gLayer.setStyle(style); drawLegend();
+  gLayer.setStyle(style); drawLegend(); mapTitle();
 }
 
+const RISK = {c: ["#cfd8d6", "#f3d98b", "#f0b35a", "#e07a2f", "#a8321f"],
+  t: ["ไม่มีประวัติ/ต่ำมาก", "ต่ำ", "ปานกลาง", "สูง", "สูงมาก"]};
+const resColor = p => p == null ? "#8a9a98" : p < 30 ? "#c23a2c" : p < 60 ? "#e0a12f" : "#1f6fa8";
+function setupOverlays() {
+  map.createPane("ov"); map.getPane("ov").style.zIndex = 440;
+  const box = document.getElementById("overlays"), leg = document.getElementById("ovlegend");
+  const irrFeats = geo.features.filter(f => f.properties.irr_share != null && f.properties.irr_share >= 0.5);
+  const OV = [
+    {id: "villages", label: "หมู่บ้านเสี่ยงภัยแล้ง (ปภ.)", url: "data/overlays/ddpm_villages.geojson",
+     make: gj => L.geoJSON(gj, {pane: "ov", pointToLayer: (f, ll) => { const p = f.properties;
+        return L.circleMarker(ll, {pane: "ov", radius: 2.2 + p.r * .8, weight: p.dw ? 1.6 : .6, color: p.dw ? "#13403f" : "#ffffff", fillColor: RISK.c[p.r] || RISK.c[0], fillOpacity: .95}); },
+       onEachFeature: (f, l) => { const p = f.properties;
+        l.bindTooltip(`<b>${p.m ? "ม." + p.m + " " : ""}${p.n}</b><br>ต.${p.t} อ.${p.a}<br>ความเสี่ยงภัยแล้ง: ${RISK.t[p.r]}${p.dw ? "<br>กระทบน้ำดื่ม" : ""}${p.aw ? "<br>กระทบน้ำเกษตร" : ""}${p.h ? "<br>" + p.h : ""}`); }}),
+     legend: () => RISK.c.map((c, i) => `<span class="tag"><span class="sw" style="background:${c}"></span>${RISK.t[i]}</span>`).join("") +
+        `<span class="tag"><span class="sw" style="background:#fff;box-shadow:inset 0 0 0 2px #13403f"></span>ขอบเข้ม = กระทบน้ำดื่ม</span>`},
+    {id: "rivers", label: "แม่น้ำสายหลัก", url: "data/overlays/rivers.geojson",
+     make: gj => L.geoJSON(gj, {pane: "ov", interactive: false, style: f => ({color: "#2f7fb5", weight: (f.properties.ord || 6) <= 4 ? 2.6 : 1.4, opacity: .9})})},
+    {id: "reservoirs", label: "อ่างเก็บน้ำ (กรมชลประทาน)", url: "data/overlays/reservoirs.geojson",
+     make: gj => L.geoJSON(gj, {pane: "ov", pointToLayer: (f, ll) => L.circleMarker(ll, {pane: "ov", radius: 6, weight: 1.5, color: "#fff", fillColor: resColor(f.properties.pct), fillOpacity: 1}),
+       onEachFeature: (f, l) => { const p = f.properties;
+        l.bindTooltip(`<b>${p.name}</b>${p.type ? " (" + p.type + ")" : ""}<br>น้ำในอ่าง ${p.pct == null ? "–" : p.pct + "%"}${p.storage_mcm != null ? ` · ${p.storage_mcm}/${p.capacity_mcm} ล้าน ลบ.ม.` : ""}${p.date ? "<br>ข้อมูล " + p.date : ""}`); }}),
+     legend: () => [["< 30%", "#c23a2c"], ["30–60%", "#e0a12f"], ["> 60%", "#1f6fa8"]].map(([t, c]) => `<span class="tag"><span class="sw" style="background:${c}"></span>อ่าง ${t}</span>`).join("")},
+    {id: "irrigation", label: "ตำบลในเขตชลประทาน", data: irrFeats.length ? {type: "FeatureCollection", features: irrFeats} : null,
+     make: gj => L.geoJSON(gj, {pane: "ov", interactive: false, style: () => ({fill: false, color: "#1f5f8b", weight: 1.6, dashArray: "5 4"})}),
+     legend: () => `<span class="tag"><span class="sw" style="background:none;box-shadow:inset 0 0 0 2px #1f5f8b"></span>เส้นประ = พื้นที่เกษตร ≥ 50% อยู่ในเขตชลประทาน</span>`}
+  ];
+  const on = {};
+  const drawLeg = () => { const h = OV.filter(o => on[o.id] && o.legend).map(o => o.legend()).join("");
+    leg.innerHTML = h; leg.hidden = !h; };
+  OV.forEach(o => {
+    const lab = document.createElement("label"); const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.id = "ov-" + o.id; lab.append(cb, " " + o.label); box.appendChild(lab);
+    const ready = gj => { const layer = o.make(gj);
+      cb.onchange = () => { if (cb.checked) layer.addTo(map); else map.removeLayer(layer); on[o.id] = cb.checked; drawLeg(); }; };
+    const missing = () => { cb.disabled = true; lab.classList.add("na"); lab.insertAdjacentHTML("beforeend", " <small>(ยังไม่มีข้อมูล)</small>"); };
+    if (o.data) ready(o.data);
+    else if (o.url) fetch(o.url).then(r => r.ok ? r.json() : Promise.reject()).then(gj => gj.features && gj.features.length ? ready(gj) : missing()).catch(missing);
+    else missing();
+  });
+}
+function showAmphoe() {
+  selected = null; drawSelection();
+  document.getElementById("detail").hidden = true; document.getElementById("amview").hidden = false;
+  document.querySelectorAll("#tbody tr").forEach(r => r.classList.remove("sel"));
+}
 function showDetail(pc) {
-  selected = pc; gLayer.setStyle(style);
+  selected = pc; drawSelection();
   document.querySelectorAll("#tbody tr").forEach(r => r.classList.toggle("sel", r.dataset.pc === pc));
   const p = byPc[pc], s = ts[pc], el = document.getElementById("detail");
+  document.getElementById("amview").hidden = true; el.hidden = false;
   const chip = (cats, v) => `<span class="pill" style="background:${CATS[cats].colors[v]};color:${v>=2?"#fff":"#17201f"}">${CATS[cats].labels[v]}</span>`;
   el.innerHTML = `
+    <button type="button" class="backlink" id="back-am">← กลับไปภาพรวมอำเภอ</button>
     <div class="head"><div><div class="eyebrow">อ.${p.amphoe} · ${p.pcode}</div><h2>ต.${p.tambon}</h2></div>
-      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><span class="muted" style="font-size:.75rem">แนวโน้ม ธ.ค.</span>${pill(p.alert_dec)}</div></div>
-    <div class="action p${p.alert_dec}">${ALERT[p.alert_dec].act}</div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><span class="muted" style="font-size:.75rem">ระดับเตือนเดือนล่าสุด</span>${pill(p.alert_now)}</div></div>
+    <div class="action p${p.alert_now}">${ALERT[p.alert_now].act}</div>
     <div class="bars" style="grid-template-columns:auto 1fr 1fr">
-      <span></span><b class="muted" style="font-size:.78rem">ล่าสุด</b><b class="muted" style="font-size:.78rem">ธ.ค.</b>
-      <span>แล้งเกษตร (CDI)</span>${chip("CDI",p.agri_now)}${chip("CDI",p.agri_dec)}
-      <span>ภัยขาดน้ำ</span>${chip("HAZ",p.haz_now)}${chip("HAZ",p.haz_dec)}
+      <span></span><b style="font-size:.78rem">ล่าสุด</b><b class="muted" style="font-size:.78rem">คาดการณ์ ${FM[0]} / ${FM[1]}</b>
+      <span>แล้งเกษตร (CDI)</span>${chip("CDI",p.agri_now)}<span class="muted" style="font-size:.8rem">${CATS.CDI.labels[p.agri_f1]} / ${CATS.CDI.labels[p.agri_f2]}</span>
+      <span>ภัยขาดน้ำ</span>${chip("HAZ",p.haz_now)}<span class="muted" style="font-size:.8rem">${CATS.HAZ.labels[p.haz_f1]} / ${CATS.HAZ.labels[p.haz_f2]}</span>
       <span>ความเปราะบาง</span><span style="grid-column:2/4">${chip("VUL",p.vuln)} <span class="muted" style="font-size:.8rem">${p.vuln_years} ปีใน 8 ปี · ${p.vuln_villages} หมู่บ้าน</span></span>
     </div>
     <div class="kv">
+      <div><small>หมู่บ้านเสี่ยงสูง/สูงมาก (ปภ.)</small><span class="num">${p.dv_high ?? "–"} / ${p.dv_n ?? "–"}</span></div>
+      <div><small>หมู่บ้านที่ภัยแล้งกระทบน้ำดื่ม · มักขาดแคลนน้ำ</small><span class="num">${p.dv_drink ?? "–"} · ${p.dv_short ?? "–"}</span></div>
+      <div><small>พื้นที่เกษตรในเขตชลประทาน</small><span class="num">${p.irr_share == null ? "ยังไม่มีข้อมูล" : Math.round(p.irr_share * 100) + "%"}</span></div>
       <div><small>SPI-3 (ฝน 3 เดือน)</small><span class="num">${fmt(p.spi3_now)}</span></div>
       <div><small>SPI-6 (ฝน 6 เดือน)</small><span class="num">${fmt(p.spi6_now)}</span></div>
       <div><small>ความชื้นดิน (z)</small><span class="num">${fmt(p.sm_z_now)}</span></div>
       <div><small>พืชผิดปกติ (z)</small><span class="num">${fmt(p.veg_z_now)}</span></div>
       <div><small>หมู่บ้านประกาศภัย 2562 / 2563</small><span class="num">${p.moo_2562} / ${p.moo_2563}</span></div>
       <div><small>ประชากรโดยประมาณ</small><span class="num">${p.pop_2020 ? Math.round(p.pop_2020).toLocaleString("th-TH") : "–"}</span></div>
+      ${(meta.external || []).map(e => `<div><small>${e.name} (z) ล่าสุด · คาดการณ์ ${FM[1]}</small><span class="num">${fmt(p["ext_" + e.id + "_now"])} · ${fmt(p["ext_" + e.id + "_f2"])}</span></div>`).join("")}
     </div>
     <div><div class="eyebrow" style="margin-bottom:4px">ระดับรายเดือน 2561–ปัจจุบัน</div><div class="chartbox"><canvas id="ts-chart" aria-label="กราฟระดับภัยแล้งรายเดือน"></canvas></div></div>`;
+  document.getElementById("back-am").onclick = showAmphoe;
   if (chart) chart.destroy();
   if (!s) return;
   const i19 = s.dates.indexOf("2019-10"), i20 = s.dates.indexOf("2020-06");
-  const band = {id:"band", beforeDraw(c){ if(i19<0) return; const {ctx,chartArea:a,scales:{x}}=c;
+  const band = {id:"band", afterDraw(c){ if (histIdx == null) return; const {ctx,chartArea:a,scales:{x}}=c; const xx = x.getPixelForValue(histIdx);
+      ctx.save(); ctx.strokeStyle = css("--fg"); ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(xx,a.top); ctx.lineTo(xx,a.bottom); ctx.stroke(); ctx.restore(); },
+    beforeDraw(c){ if(i19<0) return; const {ctx,chartArea:a,scales:{x}}=c;
     ctx.save(); ctx.fillStyle=css("--accent-soft"); const x0=x.getPixelForValue(i19), x1=x.getPixelForValue(i20<0?s.dates.length-1:i20);
     ctx.fillRect(x0,a.top,x1-x0,a.bottom-a.top); ctx.fillStyle=css("--muted"); ctx.font="11px "+css("--mono"); ctx.fillText("2562–63",x0+4,a.top+12); ctx.restore(); }};
   chart = new Chart(document.getElementById("ts-chart"), {
@@ -317,18 +549,76 @@ function renderTable() {
   const am = document.getElementById("f-amphoe").value, q = document.getElementById("f-q").value.trim();
   const rows = geo.features.map(f=>f.properties)
     .filter(p => (!am || p.amphoe === am) && (!q || p.tambon.includes(q)))
-    .sort((a,b) => b.alert_dec - a.alert_dec || b.haz_dec - a.haz_dec || b.agri_dec - a.agri_dec || b.vuln - a.vuln);
+    .sort((a,b) => b.alert_now - a.alert_now || b.alert_f1 - a.alert_f1 || b.alert_f2 - a.alert_f2 || b.vuln - a.vuln);
   document.getElementById("f-count").textContent = `${rows.length} ตำบล`;
   document.getElementById("tbody").innerHTML = rows.map(p => `<tr data-pc="${p.pcode}" tabindex="0" class="${p.pcode===selected?"sel":""}">
-    <td>${p.tambon}</td><td>${p.amphoe}</td><td>${pill(p.alert_dec)}</td><td>${ALERT[p.alert_dec].act}</td>
-    <td>${CATS.CDI.labels[p.agri_dec]}</td><td>${CATS.HAZ.labels[p.haz_dec]}</td><td class="n">${p.vuln_years}</td>
+    <td>${p.tambon}</td><td>${p.amphoe}</td><td>${pill(p.alert_now)}</td><td>${ALERT[p.alert_now].act}</td>
+    <td>${ALERT[p.alert_f1].t} / ${ALERT[p.alert_f2].t}</td><td>${CATS.CDI.labels[p.agri_now]}</td><td>${CATS.HAZ.labels[p.haz_now]}</td><td class="n">${p.vuln_years}</td>
     <td class="n">${p.pop_2020 ? Math.round(p.pop_2020).toLocaleString("th-TH") : "–"}</td></tr>`).join("");
+}
+
+const ACTIONS = {
+  3: {lbl: "เตรียมแจกจ่ายน้ำ", todo: ["เตรียมรถบรรทุกน้ำและถังเก็บน้ำ", "สำรวจแหล่งน้ำประปาหมู่บ้านกับ อปท."]},
+  2: {lbl: "เตือนเกษตรกร", todo: ["ประกาศให้ชะลอนาปรังก่อนลงทุนค่าปุ๋ย", "ประสานเกษตรอำเภอและโครงการชลประทาน"]},
+  1: {lbl: "เฝ้าระวัง", todo: ["สำรวจแหล่งน้ำหมู่บ้านภายในเดือน พ.ย.", "ติดตามข้อมูลทุกเดือน"]}
+};
+const ICONS = {
+  3: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.6 6 11a6 6 0 0 1-12 0c0-4.4 6-11 6-11z"/><path d="M9.5 15.5a2.6 2.6 0 0 0 2.5 2"/></svg>',
+  2: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9"/><path d="M12 12c0-4 3-7 7-7 0 4-3 7-7 7z"/><path d="M12 14c0-3.3-2.5-6-6-6 0 3.3 2.5 6 6 6z"/><path d="M5 21h14"/></svg>',
+  1: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>'
+};
+const people = n => n >= 1000 ? `${Math.round(n / 1000).toLocaleString("th-TH")},000` : Math.round(n).toLocaleString("th-TH");
+function renderExecutive(monthTH) {
+  const P = geo.features.map(f => f.properties);
+  const lv = a => P.filter(p => p.alert_now === a);
+  const pop = arr => arr.reduce((s, p) => s + (p.pop_2020 || 0), 0);
+  const n3 = lv(3).length, n2 = lv(2).length, n1 = lv(1).length;
+  const h = document.getElementById("headline");
+  if (n3) h.textContent = `${n3} ตำบลควรเตรียมแจกจ่ายน้ำ`;
+  else if (n2) h.textContent = `${n2} ตำบลควรเตือนเกษตรกรก่อนฤดูนาปรัง และเฝ้าระวังอีก ${n1} ตำบล`;
+  else if (n1) h.textContent = `ยังไม่ต้องแจกจ่ายน้ำหรือเตือนเกษตร แต่ควรเฝ้าระวัง ${n1} ตำบล`;
+  else h.textContent = "ยังไม่พบสัญญาณภัยแล้ง";
+  const atRisk = P.filter(p => p.alert_now >= 1);
+  const ge = (k, a) => P.filter(p => p[k] >= a).length;
+  const trend = k => { const d = ge(k, 1) - atRisk.length; return d > 0 ? `เพิ่มเป็น ${ge(k, 1)} ตำบล` : d < 0 ? `ลดเหลือ ${ge(k, 1)} ตำบล` : `ทรงตัวที่ ${ge(k, 1)} ตำบล`; };
+  document.getElementById("subline").innerHTML =
+    `สถานการณ์จากข้อมูลดาวเทียมเดือน ${monthTH} ประชากรในตำบลที่มีระดับเตือนราว ${people(pop(atRisk))} คน จาก ${people(pop(P))} คน<br>` +
+    `<span style="opacity:.85">คาดการณ์ระยะสั้น: ตำบลที่มีระดับเตือน ${FM[0]} ${trend("alert_f1")} · ${FM[1]} ${trend("alert_f2")} · El Niño ยังแรง</span>`;
+  [3, 2, 1].forEach(a => {
+    const arr = lv(a), el = document.getElementById("act" + a), A = ACTIONS[a];
+    const byAm = {}; arr.forEach(p => byAm[p.amphoe] = (byAm[p.amphoe] || 0) + 1);
+    const chips = Object.entries(byAm).sort((x, y) => y[1] - x[1]).map(([am, k]) => `<span class="chip">อ.${am} ${k}</span>`).join("");
+    el.classList.toggle("off", !arr.length);
+    let html = `<div class="top"><span class="ic">${ICONS[a]}</span><div><div class="n">${arr.length} <span style="font-size:1rem;font-weight:500">ตำบล</span></div><div class="lbl">${A.lbl}</div></div><span class="lv">${["", "เฝ้าระวัง", "เร่งด่วน", "เร่งด่วนที่สุด"][a]}</span></div>`;
+    html += arr.length
+      ? `<div class="muted" style="font-size:.85rem">ประชากรราว ${people(pop(arr))} คน</div><ul>${A.todo.map(t => `<li>${t}</li>`).join("")}</ul><div class="chips">${chips}</div>`
+      : `<div class="zero">ยังไม่มีตำบลถึงระดับนี้</div>`;
+    if (arr.length && a >= 2) html += `<div class="now">${arr.map(p => "ต." + p.tambon).join(", ")}</div>`;
+    html += `<div class="now muted">คาดการณ์ ${FM[0]}: ${P.filter(p => p.alert_f1 === a).length} ตำบล · ${FM[1]}: ${P.filter(p => p.alert_f2 === a).length} ตำบล</div>`;
+    el.innerHTML = html;
+  });
+  // amphoe coordination table
+  const am = {};
+  P.forEach(p => { const r = am[p.amphoe] = am[p.amphoe] || {a3: 0, a2: 0, a1: 0, pop: 0, dw: 0};
+    if (p.alert_now >= 1) { r["a" + p.alert_now]++; r.pop += p.pop_2020 || 0; r.dw += p.dv_drink || 0; } });
+  const rows = Object.entries(am).sort((x, y) => (y[1].a3 - x[1].a3) || (y[1].a2 - x[1].a2) || (y[1].a1 - x[1].a1) || (y[1].pop - x[1].pop));
+  const cell = v => v ? `<td class="n num">${v}</td>` : `<td class="n num z">–</td>`;
+  document.getElementById("ambody").innerHTML = rows.map(([a, r]) =>
+    `<tr style="cursor:default"><td>${a}</td>${cell(r.a3)}${cell(r.a2)}${cell(r.a1)}<td class="n num">${r.pop ? people(r.pop) : "–"}</td>${cell(r.dw)}</tr>`).join("");
+  document.getElementById("nextstep").innerHTML = `<b>อัปเดตถัดไป:</b> ต้นเดือน พ.ย. เมื่อได้ข้อมูลฝนเดือน ต.ค. ซึ่งเป็นช่วงที่ปี 2562 เริ่มแล้งชัด
+    <div style="margin-top:8px"><button type="button" id="go2019" class="chip" style="cursor:pointer">เทียบกับแผนที่ ธ.ค. 2562 (ปีที่ประกาศภัย) →</button></div>`;
+  document.getElementById("go2019").onclick = () => { const i = DATES.indexOf("2019-12"); if (i >= 0) setMonth(i);
+    document.getElementById("maptools").open = true;
+    document.getElementById("map").scrollIntoView({behavior: "smooth", block: "center"}); };
 }
 
 async function init() {
   const get = u => fetch(u).then(r => { if (!r.ok) throw new Error(u); return r.json(); });
   [geo, ts, meta] = await Promise.all([get("data/tambons.geojson"), get("data/timeseries.json"), get("data/meta.json")]);
+  // action level = the higher of "now" and "December outlook" (precautionary)
   geo.features.forEach(f => byPc[f.properties.pcode] = f.properties);
+  FM = (meta.forecast_months || []).map(d => monthTH(d)); FM.now = monthTH(meta.now_month);
+  LAYERS.forEach(L => { if (L.label) { L.label = L.label.replace("{f1}", FM[0]).replace("{f2}", FM[1]); L.note = L.note.replace("{f1}", FM[0]).replace("{f2}", FM[1]); } });
   document.getElementById("mockbar").hidden = !meta.mock;
   if (!meta.mock && meta.notes && meta.notes.length) {
     const nb = document.getElementById("notebar"); nb.hidden = false;
@@ -337,32 +627,55 @@ async function init() {
   const [y,m] = meta.now_month.split("-");
   const TH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
   document.getElementById("m-now").textContent = `${TH[+m-1]} ${+y+543}`;
-  document.getElementById("m-gen").textContent = "ประมวลผล " + meta.generated;
-  const cnt = [0,1,2,3].map(a => geo.features.filter(f=>f.properties.alert_dec===a).length);
-  document.getElementById("counts").innerHTML = [3,2,1,0].map(a => `${pill(a)}<b class="num" style="margin-right:8px">${cnt[a]}</b>`).join("");
+  renderExecutive(TH[+m-1] + " " + (+y + 543));
 
+  const USE_TH = {display: "แสดงผลเท่านั้น ยังไม่ใช้จัดระดับ", agri: "ใช้ร่วมจัดระดับแล้งเกษตร", water: "ใช้ร่วมจัดระดับภัยขาดน้ำ"};
+  (meta.external || []).forEach(e => {
+    const src = `${e.name}${e.source ? " · " + e.source : ""} · ${USE_TH[e.use_in] || e.use_in} · ข้อมูล ${e.first}–${e.last}`;
+    LAYERS.push({sep: true},
+      {id: `ext_${e.id}_now`, label: `${e.name} ล่าสุด`, type: "div", lo: -2, hi: 2, real: true, note: `${src} (ค่ามาตรฐาน z, ติดลบ = แล้ง)`},
+      {id: `ext_${e.id}_f2`, label: `${e.name} คาดการณ์`, type: "div", lo: -2, hi: 2, real: true, note: `${src} คาดการณ์ 2 เดือนข้างหน้า`});
+  });
   const lay = document.getElementById("layers");
   LAYERS.forEach(L => { if (L.sep) { lay.insertAdjacentHTML("beforeend",'<span class="sep"></span>'); return; }
     const b = document.createElement("button"); b.type="button"; b.dataset.id=L.id; b.textContent=L.label; b.onclick=()=>setLayer(L); lay.appendChild(b); });
 
   map = L.map("map", {attributionControl:false, zoomSnap:.25, scrollWheelZoom:false});
   gLayer = L.geoJSON(geo, {style, onEachFeature:(f,l) => {
-    l.bindTooltip(() => { const p=f.properties, v=p[current.id];
-      return `<b>ต.${p.tambon}</b> อ.${p.amphoe}<br>${current.type==="alert" ? ALERT[v].t : current.type==="cat" ? CATS[current.cats].labels[v] : current.label+": "+fmt(v)}`; }, {sticky:true});
-    l.on("click", () => showDetail(f.properties.pcode)); }}).addTo(map);
+    l.bindTooltip(() => { const p=f.properties, v=val(p, current);
+      let t = `<b>ต.${p.tambon}</b> อ.${p.amphoe}<br>${current.type==="alert" ? ALERT[v].t + (v ? " · " + ALERT[v].act : "") : current.type==="cat" ? CATS[current.cats].labels[v] : current.label+": "+fmt(v)}`;
+      if (current.id === "alert_now" && histIdx == null) t += `<br><span style="opacity:.7">คาดการณ์ ${FM[0]}: ${ALERT[p.alert_f1].t} · ${FM[1]}: ${ALERT[p.alert_f2].t}</span>`;
+      return t; }, {sticky:true});
+    byPcFeature[f.properties.pcode] = f;
+    l.on("click", () => showDetail(f.properties.pcode));
+    l.on("mouseover", () => { hoverLayer.clearLayers(); if (f.properties.pcode !== selected) hoverLayer.addData(f); });
+    l.on("mouseout", () => hoverLayer.clearLayers()); }}).addTo(map);
+  // outlines live in their own pane above the fills and never take the mouse, so shapes are never reordered
+  map.createPane("outline"); map.getPane("outline").style.zIndex = 450; map.getPane("outline").style.pointerEvents = "none";
+  hoverLayer = L.geoJSON(null, {pane: "outline", interactive: false, style: () => ({color: css("--fg"), weight: 1.6, opacity: .8, fill: false})}).addTo(map);
+  selLayer = L.geoJSON(null, {pane: "outline", interactive: false, style: () => ({color: css("--fg"), weight: 3, opacity: 1, fill: false, lineJoin: "round"})}).addTo(map);
+  setupOverlays();
+  map.getContainer().addEventListener("mouseleave", () => hoverLayer.clearLayers());
   map.fitBounds(gLayer.getBounds(), {padding:[8,8]});
   new ResizeObserver(() => map.invalidateSize()).observe(document.getElementById("map"));
-  setLayer(LAYERS[0]);
+  DATES = ts[Object.keys(ts)[0]].dates;
+  const sl = document.getElementById("t-slider");
+  sl.max = DATES.length; sl.value = DATES.length;
+  sl.oninput = () => setMonth(+sl.value);
+  const QUICK = [["now", "ล่าสุด"], ["2015-12", "ธ.ค. 2558 (El Niño)"], ["2019-12", "ธ.ค. 2562 (ประกาศภัย)"], ["2020-03", "มี.ค. 2563 (แล้งสุด)"], ["2023-12", "ธ.ค. 2566 (El Niño)"], ["2024-12", "ธ.ค. 2567"]];
+  document.getElementById("t-quick").innerHTML = QUICK.filter(([d]) => d === "now" || DATES.includes(d))
+    .map(([d, t]) => `<button type="button" data-i="${d === "now" ? "now" : DATES.indexOf(d)}">${t}</button>`).join("");
+  document.querySelectorAll("#t-quick button").forEach(b => b.onclick = () => setMonth(b.dataset.i === "now" ? null : +b.dataset.i));
+  setLayer(LAYERS[0]); setMonth(null);
 
   const sel = document.getElementById("f-amphoe");
   [...new Set(geo.features.map(f=>f.properties.amphoe))].sort((a,b)=>a.localeCompare(b,"th")).forEach(a => sel.add(new Option(a,a)));
   sel.onchange = renderTable; document.getElementById("f-q").oninput = renderTable;
   const tb = document.getElementById("tbody");
-  tb.onclick = e => { const r = e.target.closest("tr"); if (r) showDetail(r.dataset.pc); };
+  tb.onclick = e => { const r = e.target.closest("tr"); if (r) { showDetail(r.dataset.pc); document.getElementById("side").scrollIntoView({behavior: "smooth", block: "start"}); } };
   tb.onkeydown = e => { if (e.key === "Enter") { const r = e.target.closest("tr"); if (r) showDetail(r.dataset.pc); } };
   renderTable();
-  const top = geo.features.map(f=>f.properties).sort((a,b)=>b.alert_dec-a.alert_dec||b.haz_dec-a.haz_dec||b.agri_dec-a.agri_dec||b.vuln-a.vuln)[0];
-  showDetail(top.pcode);
+
 }
 init().catch(e => { document.getElementById("detail").innerHTML = `<div class="empty">โหลดข้อมูลไม่สำเร็จ (${e.message}) ตรวจว่าโฟลเดอร์ data/ อยู่คู่กับ index.html</div>`; });
 </script>

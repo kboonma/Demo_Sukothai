@@ -47,3 +47,10 @@ Settings → Pages → Source: *Deploy from a branch* → `main` / root. Preview
 - Boundaries: Royal Thai Survey Department via HDX COD-AB (Thailand admin level 3). Some mirrors list the use limitation as *humanitarian use only*: confirm before publishing in a **public** repository, or use official boundaries from GISTDA / the province.
 - DDPM open data is incomplete (FY2564–2565 sparse, FY2558–2561 missing); absence of a record does not mean no drought.
 - Index weights and alert thresholds are provisional and must be calibrated against the FY2562–2563 declarations and reviewed with RID.
+
+## External drought indices (intake)
+
+Indices computed elsewhere (e.g. the ARDA / สวก. project) go in `raw/external/<index_id>/` as `data.csv` + `meta.json`.
+Spec and template: `intake/INTAKE.md`, `intake/_template/`. Check a delivery with
+`python scripts/external_intake.py --check raw/external/<index_id>`. They show on the dashboard and are back-tested
+automatically; they only affect alert levels after the team sets `use_in` to `agri` or `water`.

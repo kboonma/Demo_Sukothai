@@ -1,0 +1,14 @@
+{
+  "id": "arda_di",
+  "name": "ดัชนีภัยแล้ง โครงการ สวก.",
+  "source": "โครงการ สวก. (ชื่อโครงการ / หน่วยงาน)",
+  "contact": "ชื่อผู้คำนวณ",
+  "method": "อธิบายสั้น ๆ ว่าคำนวณอย่างไร ใช้ข้อมูลอะไร",
+  "kind": "zscore",
+  "drier_is": "lower",
+  "value_column": "value",
+  "units": "z",
+  "missing_value": -9999,
+  "use_in": "display",
+  "class_to_z": {"0": 0, "1": -1, "2": -1.5, "3": -2}
+}

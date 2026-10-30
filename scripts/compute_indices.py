@@ -22,7 +22,7 @@ Alert
   1 yellow either index >= 0.30 -> watch
   0 normal
 """
-import argparse, json, os, datetime
+import argparse, json, os, sys, datetime
 import numpy as np, pandas as pd
 from scipy import stats
 
@@ -207,6 +207,13 @@ def compute(d, geo):
             water_for_index = df["water_z"]
         df["veg_z"] = empirical_z(ndvi)
         df["water_z_idx"] = water_for_index
+        ext_agri, ext_water = [], []
+        for em, z in d.get("external", []):
+            col = f"ext_{em['id']}"
+            df[col] = z[pc].reindex(df.index) if pc in z.columns else np.nan
+            (ext_agri if em["use_in"] == "agri" else ext_water if em["use_in"] == "water" else []).append(col)
+        df["ext_agri"] = df[ext_agri].min(axis=1) if ext_agri else np.nan     # most severe external signal
+        df["ext_water"] = df[ext_water].min(axis=1) if ext_water else np.nan
         df["agri_level"] = cdi_levels(df)
         df["water_haz"] = water_hazard_level(df)
         df["pcode"] = pc
@@ -219,8 +226,8 @@ def compute(d, geo):
 #   1 Watch   : SPI-3 <= -1 or SPI-1 <= -2                       (rain deficit)
 #   2 Warning : soil-moisture anomaly <= -1, with rain deficit or previous level >= 1
 #   3 Alert   : vegetation anomaly <= -1, with SM deficit or previous level >= 2
-def cdi_step(spi1, spi3, sm, veg, prev):
-    rain = (spi3 <= -1) or (spi1 <= -2)
+def cdi_step(spi1, spi3, sm, veg, prev, ext=99):
+    rain = (spi3 <= -1) or (spi1 <= -2) or (ext <= -1)    # ext: external index with use_in="agri"
     if veg <= -1 and (sm <= -1 or prev >= 2): return 3
     if sm <= -1 and (rain or prev >= 1): return 2
     if rain: return 1
@@ -230,9 +237,9 @@ def cdi_step(spi1, spi3, sm, veg, prev):
 def cdi_levels(df):
     lv, prev = [], 0
     for _, r in df.iterrows():
-        v = [r.get(k) for k in ("spi1", "spi3", "sm_z", "veg_z")]
+        v = [r.get(k) for k in ("spi1", "spi3", "sm_z", "veg_z")] + [r.get("ext_agri", np.nan)]
         v = [99 if pd.isna(x) else x for x in v]
-        prev = cdi_step(*v, prev)
+        prev = cdi_step(*v[:4], prev, v[4])
         lv.append(prev)
     return pd.Series(lv, index=df.index)
 
@@ -240,7 +247,8 @@ def cdi_levels(df):
 # Drinking-water hazard: count of hydrological deficits (SPI-6, deep soil moisture, water-body area when available)
 #   0 none, 1 moderate (one deficit), 2 high (two or more)
 def water_hazard_level(df):
-    flags = (df["spi6"] <= -1).astype(int) + (df["smdeep_z"] <= -1).astype(int) + (df["water_z_idx"] <= -1).astype(int)
+    flags = (df["spi6"] <= -1).astype(int) + (df["smdeep_z"] <= -1).astype(int) + (df["water_z_idx"] <= -1).astype(int) \
+        + (df.get("ext_water", pd.Series(np.nan, index=df.index)) <= -1).astype(int)
     return flags.clip(upper=2)
 
 
@@ -253,7 +261,13 @@ WATER_MATRIX = {   # (vulnerability, hazard) -> 0 none, 1 watch, 3 prepare water
 }
 
 
-def alert(agri_level, water_haz, vuln, crop_frac):
+IRR_SHARE_MIN = 0.5   # tambon counted as irrigated when >= 50% of its cropland is inside RID irrigation areas
+
+
+def alert(agri_level, water_haz, vuln, crop_frac, irr_share=None):
+    # inside irrigation areas farmers can still get canal water: farmer warning needs one CDI level more
+    if irr_share is not None and irr_share >= IRR_SHARE_MIN:
+        agri_level = max(0, agri_level - 1)
     w = WATER_MATRIX[(vuln, int(water_haz))]
     if w == 3: return 3
     if agri_level >= 2 and crop_frac >= 0.10: return 2
@@ -262,14 +276,16 @@ def alert(agri_level, water_haz, vuln, crop_frac):
 
 
 # ---------- write ----------
-def write(ts, geo, d, out, mock, vuln):
+def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None):
+    irr = irr or {}; ddpm_risk = ddpm_risk or {}
     os.makedirs(out, exist_ok=True)
     st = d["static"].set_index("pcode")
     ts = ts.set_index(["pcode", "date"]).sort_index()
     cols = ["rain_mm", "spi1", "spi3", "spi6", "spei3", "sm_z", "smdeep_z", "veg_z", "vci", "tci", "vhi", "water_z"]
     latest_month = {c: ts[c].dropna().index.get_level_values("date").max() for c in cols}
     now = min(latest_month["spi3"], latest_month["sm_z"], latest_month["veg_z"])
-    zc = ["spi1", "spi3", "spi6", "sm_z", "smdeep_z", "veg_z", "water_z_idx"]
+    ext_cols = [f"ext_{em['id']}" for em, _ in d.get("external", [])]
+    zc = ["spi1", "spi3", "spi6", "sm_z", "smdeep_z", "veg_z", "water_z_idx", "ext_agri", "ext_water"] + ext_cols
     series, summary = {}, []
     for f in geo["features"]:
         p = f["properties"]; pc = p["pcode"]
@@ -282,40 +298,134 @@ def write(ts, geo, d, out, mock, vuln):
         dec = t[(t.index.month == 12) & (t.index.year.isin(ANALOG_YEARS))]
         zd = {c: (0.5 * cur[c] + 0.5 * dec[c].mean()) if pd.notna(cur[c]) else dec[c].mean() for c in zc}
         zd = {c: (99 if pd.isna(x) else x) for c, x in zd.items()}
-        agri_dec = cdi_step(zd["spi1"], zd["spi3"], zd["sm_z"], zd["veg_z"], int(cur["agri_level"]))
-        haz_dec = min(2, int(zd["spi6"] <= -1) + int(zd["smdeep_z"] <= -1) + int(zd["water_z_idx"] <= -1))
-        a_now = alert(int(cur["agri_level"]), int(cur["water_haz"]), v["level"], crop_frac)
+        agri_dec = cdi_step(zd["spi1"], zd["spi3"], zd["sm_z"], zd["veg_z"], int(cur["agri_level"]), zd["ext_agri"])
+        haz_dec = min(2, int(zd["spi6"] <= -1) + int(zd["smdeep_z"] <= -1) + int(zd["water_z_idx"] <= -1) + int(zd["ext_water"] <= -1))
+        # short-range outlook, 1 and 2 months ahead: persistence of the latest anomaly blended with the El Nino analog
+        # years' anomaly for the same target month; persistence weight 0.7 (+1 month) and 0.5 (+2 months)
+        fc, prev_lv = {}, int(cur["agri_level"])
+        for k, w in ((1, 0.7), (2, 0.5)):
+            tgt = now + pd.DateOffset(months=k)
+            yrs = [y + (tgt.year - now.year) for y in ANALOG_YEARS]
+            an = t[(t.index.month == tgt.month) & (t.index.year.isin(yrs))]
+            zf = {c: (w * cur[c] + (1 - w) * an[c].mean()) if pd.notna(cur[c]) else an[c].mean() for c in zc}
+            zf = {c: (99 if pd.isna(x) else x) for c, x in zf.items()}
+            ag = cdi_step(zf["spi1"], zf["spi3"], zf["sm_z"], zf["veg_z"], prev_lv, zf["ext_agri"])
+            hz = min(2, int(zf["spi6"] <= -1) + int(zf["smdeep_z"] <= -1) + int(zf["water_z_idx"] <= -1) + int(zf["ext_water"] <= -1))
+            fc[k] = {"z": zf, "agri": ag, "haz": hz, "alert": alert(ag, hz, v["level"], crop_frac, irr.get(pc))}
+            prev_lv = ag
+        a_now = alert(int(cur["agri_level"]), int(cur["water_haz"]), v["level"], crop_frac, irr.get(pc))
         a_dec = alert(agri_dec, haz_dec, v["level"], crop_frac)
         r = lambda x, n=2: None if pd.isna(x) else round(float(x), n)
         p.update({
             "pop_2020": r(st.loc[pc, "pop_2020"], 0) if pc in st.index else None,
             "crop_frac": r(crop_frac), "alert_now": a_now, "alert_dec": a_dec,
+            "alert_f1": fc[1]["alert"], "alert_f2": fc[2]["alert"], "agri_f1": fc[1]["agri"], "agri_f2": fc[2]["agri"],
+            "haz_f1": fc[1]["haz"], "haz_f2": fc[2]["haz"],
+            **{f"{c}_f{k}": (r(fc[k]["z"][c]) if fc[k]["z"][c] != 99 else None) for k in (1, 2) for c in ["spi3", "sm_z", "veg_z"] + ext_cols},
             "agri_now": int(cur["agri_level"]), "agri_dec": agri_dec,
             "haz_now": int(cur["water_haz"]), "haz_dec": haz_dec,
             "vuln": v["level"], "vuln_years": v["years"], "vuln_villages": v["villages"],
+            "irr_share": r(irr.get(pc)) if pc in irr else None,
+            **ddpm_risk.get(pc, {}),
             **{f"{c}_now": r(cur[c]) for c in ["spi3", "spi6", "sm_z", "veg_z", "vhi", "water_z"]},
             **{f"{c}_dec": r(zd[c]) if zd[c] != 99 else None for c in ["spi3", "spi6", "sm_z", "veg_z"]},
+            **{f"{c}_now": r(cur[c]) for c in ext_cols},
+            **{f"{c}_dec": r(zd[c]) if zd[c] != 99 else None for c in ext_cols},
         })
-        sub = t[t.index >= "2018-01-01"]
+        sub = t[t.index >= "2015-01-01"]
         series[pc] = {"dates": [x.strftime("%Y-%m") for x in sub.index],
                       **{c: [r(x) for x in sub[c]] for c in ["rain_mm", "spi3", "spi6", "sm_z", "veg_z", "vhi", "water_z"]},
+                      **{c: [r(x) for x in sub[c]] for c in ext_cols},
                       "agri_level": [int(x) for x in sub["agri_level"]], "water_haz": [int(x) for x in sub["water_haz"]]}
-        summary.append({k: p.get(k) for k in ["pcode", "amphoe", "tambon", "alert_now", "alert_dec", "agri_now", "agri_dec",
-                                              "haz_now", "haz_dec", "vuln", "vuln_years", "pop_2020"]})
+        summary.append({k: p.get(k) for k in ["pcode", "amphoe", "tambon", "alert_now", "alert_f1", "alert_f2", "agri_now", "agri_f1",
+                                              "haz_now", "haz_f1", "vuln", "vuln_years", "pop_2020"]})
     meta = {"generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "mock": mock,
             "now_month": now.strftime("%Y-%m"),
             "latest_by_indicator": {c: (None if pd.isna(latest_month[c]) else latest_month[c].strftime("%Y-%m")) for c in cols},
             "analog_years": ANALOG_YEARS, "method": "CDI cascade + hazard x vulnerability matrix",
             "alert_counts_now": pd.Series([x["alert_now"] for x in summary]).value_counts().to_dict(),
-            "alert_counts_dec": pd.Series([x["alert_dec"] for x in summary]).value_counts().to_dict(),
-            "notes": d.get("notes", [])}
+            "forecast_months": [(now + pd.DateOffset(months=k)).strftime("%Y-%m") for k in (1, 2)],
+            "alert_counts_f1": pd.Series([x["alert_f1"] for x in summary]).value_counts().to_dict(),
+            "alert_counts_f2": pd.Series([x["alert_f2"] for x in summary]).value_counts().to_dict(),
+            "notes": d.get("notes", []),
+            "external": [{"id": em["id"], "name": em["name"], "units": em["units"], "kind": em["kind"], "use_in": em["use_in"],
+                          "source": em.get("source", ""), "contact": em.get("contact", ""),
+                          "first": em["report"]["first"], "last": em["report"]["last"], "tambons": em["report"]["tambons"],
+                          "backtest": external_backtest(ts.reset_index(), f"ext_{em['id']}")} for em, _ in d.get("external", [])]}
     meta = json.loads(json.dumps(meta, default=int))
     json.dump(geo, open(os.path.join(out, "tambons.geojson"), "w"), ensure_ascii=False, separators=(",", ":"))
     json.dump(series, open(os.path.join(out, "timeseries.json"), "w"), ensure_ascii=False, separators=(",", ":"))
     json.dump(meta, open(os.path.join(out, "meta.json"), "w"), ensure_ascii=False, indent=1)
-    pd.DataFrame(summary).sort_values(["alert_dec", "haz_dec", "vuln"], ascending=False).to_csv(
+    pd.DataFrame(summary).sort_values(["alert_now", "alert_f1", "alert_f2", "vuln"], ascending=False).to_csv(
         os.path.join(out, "tambon_alerts.csv"), index=False, encoding="utf-8-sig")
     return meta
+
+
+def external_backtest(ts, col):
+    """Share of tambons with the external index <= -1, mean over each Nov-Mar dry season."""
+    if col not in ts or ts[col].isna().all():
+        return {}
+    x = ts[["date", col]].dropna()
+    prov = x.groupby("date")[col].apply(lambda v: float((v <= -1).mean()))
+    res = {}
+    for y in range(prov.index.min().year, prov.index.max().year + 1):
+        sel = prov[(prov.index >= f"{y}-11-01") & (prov.index <= f"{y+1}-03-01")]
+        if len(sel):
+            res[f"{y+543-2500:02d}/{y+544-2500:02d}"] = round(float(sel.mean()), 3)
+    return res
+
+
+def load_irrigation(path):
+    """Optional tambon irrigation share. CSV with pcode (or tambon_code) and irr_share 0-1 (or irr_pct 0-100)."""
+    if not path or not os.path.exists(path):
+        return {}
+    df = pd.read_csv(path, dtype={"pcode": str, "tambon_code": str})
+    if "pcode" not in df and "tambon_code" in df:
+        df["pcode"] = "TH" + df["tambon_code"].str.zfill(6)
+    if "irr_share" not in df and "irr_pct" in df:
+        df["irr_share"] = df["irr_pct"] / 100
+    df["pcode"] = df["pcode"].str.upper().where(df["pcode"].str.upper().str.startswith("TH"), "TH" + df["pcode"])
+    print(f"[irrigation] {path}: {len(df)} ตำบล, ในเขตชลประทาน >= {IRR_SHARE_MIN:.0%}: {(df.irr_share >= IRR_SHARE_MIN).sum()}")
+    return dict(zip(df["pcode"], df["irr_share"].clip(0, 1)))
+
+
+def load_ddpm_risk(path):
+    """DDPM drought_region village risk (gis-portal.disaster.go.th) summarised per tambon."""
+    if not path or not os.path.exists(path):
+        return {}
+    P = json.load(open(path, encoding="utf-8"))
+    out = {}
+    for p in P:
+        pc = "TH" + str(p["sub_district_code"])
+        o = out.setdefault(pc, {"dv_n": 0, "dv_high": 0, "dv_drink": 0, "dv_short": 0, "dv_max": 0})
+        o["dv_n"] += 1
+        o["dv_high"] += int((p["risk_level_value"] or 0) >= 3)
+        o["dv_drink"] += int(p["impactall_drinking_water"] == 1)
+        o["dv_short"] += int(p["impactall_hardness"] == "มักจะขาดแคลนน้ำ")
+        o["dv_max"] = max(o["dv_max"], p["risk_level_value"] or 0)
+    return out
+
+
+def reservoirs_overlay(path, out):
+    """raw/reservoirs.csv (name, lat, lon, capacity_mcm, storage_mcm, date[, type, tambon, amphoe]) -> data/overlays/reservoirs.geojson"""
+    if not path or not os.path.exists(path):
+        return None
+    df = pd.read_csv(path)
+    df.columns = [c.strip().lower() for c in df.columns]
+    df = df.dropna(subset=["lat", "lon"])
+    feats = []
+    for _, r in df.iterrows():
+        pct = None
+        if pd.notna(r.get("storage_mcm")) and pd.notna(r.get("capacity_mcm")) and r["capacity_mcm"] > 0:
+            pct = round(float(r["storage_mcm"]) / float(r["capacity_mcm"]) * 100, 1)
+        props = {k: (None if pd.isna(r.get(k)) else r.get(k)) for k in ["name", "type", "tambon", "amphoe", "capacity_mcm", "storage_mcm", "date"]}
+        props["pct"] = pct
+        feats.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [round(float(r["lon"]), 5), round(float(r["lat"]), 5)]},
+                      "properties": json.loads(json.dumps(props, default=str))})
+    os.makedirs(os.path.join(out, "overlays"), exist_ok=True)
+    json.dump({"type": "FeatureCollection", "features": feats}, open(os.path.join(out, "overlays", "reservoirs.geojson"), "w"), ensure_ascii=False)
+    print(f"[reservoirs] {len(feats)} แห่ง -> overlays/reservoirs.geojson")
+    return len(feats)
 
 
 def load_vuln(path):
@@ -337,12 +447,15 @@ def validate(ts, geo):
     res = {}
     for month in ["2019-06", "2019-12", "2020-03"]:
         x = ts[ts.date == pd.Timestamp(month + "-01")].set_index("pcode")
-        for c in ["agri_level", "water_haz"]:
-            y = x.index.map(lab); s_ = x[c]
+        for c in ["agri_level", "water_haz"] + [k for k in x.columns if k.startswith("ext_") and k not in ("ext_agri", "ext_water")]:
+            y = x.index.map(lab); s_ = -x[c] if c.startswith("ext_") else x[c]   # ext: lower = drier
+            if s_.isna().all():
+                continue
             pos, neg = s_[y], s_[~y]
             if len(pos) and len(neg):
                 auc = (pos.values[:, None] > neg.values[None, :]).mean() + 0.5 * (pos.values[:, None] == neg.values[None, :]).mean()
-                res[f"{month} {c}"] = {"auc": round(float(auc), 2), "levels_all": x[c].value_counts().sort_index().to_dict()}
+                res[f"{month} {c}"] = {"auc": round(float(auc), 2)} if c.startswith("ext_") else \
+                    {"auc": round(float(auc), 2), "levels_all": x[c].value_counts().sort_index().to_dict()}
     return res
 
 
@@ -351,11 +464,23 @@ if __name__ == "__main__":
     ap.add_argument("--raw"); ap.add_argument("--boundaries", required=True)
     ap.add_argument("--out", default="data"); ap.add_argument("--mock", action="store_true")
     ap.add_argument("--vuln", default="data/source/sukhothai_ddpm_risk_villages_2560-2567_tambon.csv")
+    ap.add_argument("--irrigation", default="raw/irrigation_tambon.csv", help="optional tambon irrigation share CSV")
+    ap.add_argument("--ddpm-risk", default="data/source/ddpm_drought_region_villages_64.json")
+    ap.add_argument("--reservoirs", default="raw/reservoirs.csv", help="optional reservoir list with storage (from RID)")
+    ap.add_argument("--external", default="raw/external", help="folder of external indices (one sub-folder each)")
     ap.add_argument("--pop-factor", type=float, default=1.0, help="divide population by this (fix for old static export)")
     a = ap.parse_args()
     geo = json.load(open(a.boundaries))
     d = make_mock(geo) if a.mock else load_raw(a.raw, a.pop_factor)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from external_intake import load_external
+    d["external"] = load_external(a.external, geo)
     ts = compute(d, geo)
     print("validation AUC vs DDPM 2019/20 (0.5 = no skill):", validate(ts, geo))
-    meta = write(ts, geo, d, a.out, a.mock, load_vuln(a.vuln))
+    reservoirs_overlay(a.reservoirs, a.out)
+    irr = load_irrigation(a.irrigation)
+    d.setdefault("notes", [])
+    if not irr:
+        d["notes"].append("ยังไม่มีขอบเขตพื้นที่ชลประทาน ระดับเตือนเกษตรยังไม่ได้ปรับตามเขตชลประทาน")
+    meta = write(ts, geo, d, a.out, a.mock, load_vuln(a.vuln), irr, load_ddpm_risk(a.ddpm_risk))
     print(json.dumps(meta, ensure_ascii=False, indent=1))
