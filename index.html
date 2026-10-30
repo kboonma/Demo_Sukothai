@@ -166,8 +166,11 @@ footer{font-size:.8rem;color:var(--muted)}
 details.panel summary{cursor:pointer;font:600 1.1rem var(--display)}
 details.panel[open] summary{margin-bottom:10px}
 
-#map{background:radial-gradient(80% 70% at 50% 45%,var(--surface) 0,var(--bg2) 100%);box-shadow:inset 0 0 0 1px var(--line)}
-#map .leaflet-overlay-pane svg{filter:drop-shadow(0 10px 16px rgb(13 52 56 / .20))}
+#map{background:var(--bg2);box-shadow:inset 0 0 0 1px var(--line)}
+.basemaps{position:absolute;top:10px;right:10px;z-index:1000;display:flex;gap:4px;background:var(--surface);border-radius:8px;padding:3px;box-shadow:0 1px 4px rgb(0 0 0 / .25)}
+.basemaps button{font:400 .78rem var(--body);border:0;background:none;color:var(--fg);border-radius:6px;padding:4px 8px;cursor:pointer}
+.basemaps button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+#mapwrap{position:relative}
 .legend .tag{background:var(--bg2);border-radius:999px;padding:2px 10px 2px 6px}
 .legend .sw{border-radius:50%}
 tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg2) 70%,transparent)}
@@ -175,6 +178,13 @@ th{text-transform:none;letter-spacing:.02em}
 
 /* Leaflet essentials (stylesheet inlined) */
 .leaflet-pane,.leaflet-layer,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box{position:absolute;left:0;top:0}
+.leaflet-tile-pane{z-index:200}
+.leaflet-tile,.leaflet-container img.leaflet-tile{position:absolute;max-width:none!important;max-height:none!important;visibility:hidden;user-select:none;-webkit-user-drag:none}
+.leaflet-tile-loaded{visibility:inherit}
+.leaflet-tile-container{pointer-events:none}
+.leaflet-control-container .leaflet-bottom{position:absolute;z-index:1000;pointer-events:none;bottom:0;right:0}
+.leaflet-control-attribution{pointer-events:auto;background:rgb(255 255 255 / .8);color:#333;font-size:10px;padding:0 5px;margin:0!important;float:right}
+.leaflet-control-attribution a{color:#0b6e82}
 .leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent;font:inherit;touch-action:none}
 .leaflet-overlay-pane{z-index:400}.leaflet-tooltip-pane{z-index:650}.leaflet-map-pane{z-index:100}
 .leaflet-pane>svg path{pointer-events:none}.leaflet-pane>svg path.leaflet-interactive{pointer-events:auto;cursor:pointer}
@@ -233,7 +243,10 @@ th{text-transform:none;letter-spacing:.02em}
         <span class="muted" style="font-size:.85rem">คลิกตำบลเพื่อดูรายละเอียด</span>
       </div>
       <div id="histflag" hidden></div>
-      <div id="map" role="img" aria-label="แผนที่ตำบลจังหวัดสุโขทัย"></div>
+      <div id="mapwrap">
+        <div id="map" role="img" aria-label="แผนที่ตำบลจังหวัดสุโขทัย"></div>
+        <div class="basemaps" id="basemaps" role="group" aria-label="แผนที่พื้นหลัง"></div>
+      </div>
       <div class="legend" id="legend"></div>
       <div class="layer-note" id="layernote"></div>
       <details class="maptools" id="maptools">
@@ -397,7 +410,7 @@ function colorFor(p, L) {
   return L.type === "seq" ? ramp(SEQ, t) : ramp(DIV, t);
 }
 function style(f) {
-  return {fillColor: colorFor(f.properties, current), fillOpacity: .82,
+  return {fillColor: colorFor(f.properties, current), fillOpacity: baseOn ? .62 : .85,
           color: css("--edge"), weight: .6, opacity: 1, lineJoin: "round"};
 }
 let hoverLayer, selLayer;
@@ -488,6 +501,28 @@ function setupOverlays() {
     else if (o.url) fetch(o.url).then(r => r.ok ? r.json() : Promise.reject()).then(gj => gj.features && gj.features.length ? ready(gj) : missing()).catch(missing);
     else missing();
   });
+}
+let baseOn = false;
+function setupBasemaps() {
+  const BASES = [
+    {id: "none", label: "ไม่มีพื้นหลัง"},
+    {id: "sat", label: "ภาพดาวเทียม", url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+     opt: {maxZoom: 18, attribution: "ภาพดาวเทียม © Esri, Maxar, Earthstar Geographics"}},
+    {id: "bm", label: "Blue Marble", url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg",
+     opt: {maxNativeZoom: 8, maxZoom: 18, attribution: "Blue Marble © NASA Earth Observatory / GIBS"}},
+    {id: "osm", label: "แผนที่ถนน", url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+     opt: {maxZoom: 19, attribution: "© ผู้ร่วมพัฒนา OpenStreetMap"}}
+  ];
+  const box = document.getElementById("basemaps"); let cur = null;
+  const pick = b => {
+    if (cur) map.removeLayer(cur); cur = b.url ? L.tileLayer(b.url, b.opt).addTo(map) : null;
+    baseOn = !!cur; if (gLayer) gLayer.setStyle(style);
+    box.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.id === b.id)));
+    try { localStorage.setItem("dw-base", b.id); } catch (e) {}
+  };
+  BASES.forEach(b => { const btn = document.createElement("button"); btn.type = "button"; btn.dataset.id = b.id; btn.textContent = b.label; btn.onclick = () => pick(b); box.appendChild(btn); });
+  let saved = "sat"; try { saved = localStorage.getItem("dw-base") || "sat"; } catch (e) {}
+  setTimeout(() => pick(BASES.find(b => b.id === saved) || BASES[1]), 0);
 }
 function showAmphoe() {
   selected = null; drawSelection();
@@ -640,7 +675,9 @@ async function init() {
   LAYERS.forEach(L => { if (L.sep) { lay.insertAdjacentHTML("beforeend",'<span class="sep"></span>'); return; }
     const b = document.createElement("button"); b.type="button"; b.dataset.id=L.id; b.textContent=L.label; b.onclick=()=>setLayer(L); lay.appendChild(b); });
 
-  map = L.map("map", {attributionControl:false, zoomSnap:.25, scrollWheelZoom:false});
+  map = L.map("map", {attributionControl:true, zoomSnap:.25, scrollWheelZoom:false});
+  map.attributionControl.setPrefix(false);
+  setupBasemaps();
   gLayer = L.geoJSON(geo, {style, onEachFeature:(f,l) => {
     l.bindTooltip(() => { const p=f.properties, v=val(p, current);
       let t = `<b>ต.${p.tambon}</b> อ.${p.amphoe}<br>${current.type==="alert" ? ALERT[v].t + (v ? " · " + ALERT[v].act : "") : current.type==="cat" ? CATS[current.cats].labels[v] : current.label+": "+fmt(v)}`;
