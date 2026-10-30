@@ -179,8 +179,8 @@ th{text-transform:none;letter-spacing:.02em}
 /* Leaflet essentials (stylesheet inlined) */
 .leaflet-pane,.leaflet-layer,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box{position:absolute;left:0;top:0}
 .leaflet-tile-pane{z-index:200}
-.leaflet-tile,.leaflet-container img.leaflet-tile{position:absolute;max-width:none!important;max-height:none!important;visibility:hidden;user-select:none;-webkit-user-drag:none}
-.leaflet-tile-loaded{visibility:inherit}
+.leaflet-container img.leaflet-tile{position:absolute;max-width:none!important;max-height:none!important;visibility:hidden;user-select:none;-webkit-user-drag:none;border:0}
+.leaflet-container img.leaflet-tile.leaflet-tile-loaded{visibility:inherit}
 .leaflet-tile-container{pointer-events:none}
 .leaflet-control-container .leaflet-bottom{position:absolute;z-index:1000;pointer-events:none;bottom:0;right:0}
 .leaflet-control-attribution{pointer-events:auto;background:rgb(255 255 255 / .8);color:#333;font-size:10px;padding:0 5px;margin:0!important;float:right}
@@ -420,12 +420,13 @@ function drawSelection() {
   if (selected && byPcFeature[selected]) selLayer.addData(byPcFeature[selected]);
 }
 const fmt = (v, d=2) => v == null ? "–" : Number(v).toFixed(d);
-const pill = a => `<span class="pill p${a}"><i style="background:currentColor;opacity:.6"></i>${ALERT[a].t}</span>`;
+const AL = a => ALERT[a] || ALERT[0];
+const pill = a => `<span class="pill p${a}"><i style="background:currentColor;opacity:.6"></i>${AL(a).t}</span>`;
 
 function drawLegend() {
   const L = current, el = document.getElementById("legend");
   if (L.type === "alert") { const c = [0,0,0,0]; geo.features.forEach(f => { const v = val(f.properties, L); if (v != null) c[v]++; });
-    el.innerHTML = [3,2,1,0].map(i=>`<span class="tag"><span class="sw" style="background:${aColor(i)}"></span>${ALERT[i].t} (${c[i]})</span>`).join(""); }
+    el.innerHTML = [3,2,1,0].map(i=>`<span class="tag"><span class="sw" style="background:${aColor(i)}"></span>${AL(i).t} (${c[i]})</span>`).join(""); }
   else if (L.type === "cat") el.innerHTML = CATS[L.cats].labels.map((t,i)=>`<span class="tag"><span class="sw" style="background:${CATS[L.cats].colors[i]}"></span>${t}</span>`).join("");
   else {
     const st = L.type === "seq" ? SEQ : DIV;
@@ -435,7 +436,7 @@ function drawLegend() {
   let extra = "";
   if (L.type === "cat" || L.type === "alert") {
     const vals = new Set(geo.features.map(f => val(f.properties, L)));
-    if (vals.size === 1) { const v = [...vals][0]; extra = ` · ทั้ง 86 ตำบลอยู่ระดับเดียวกัน: ${L.type === "cat" ? CATS[L.cats].labels[v] : ALERT[v].t}`; }
+    if (vals.size === 1) { const v = [...vals][0]; extra = ` · ทั้ง 86 ตำบลอยู่ระดับเดียวกัน: ${L.type === "cat" ? CATS[L.cats].labels[v] : AL(v).t}`; }
   }
   document.getElementById("layernote").textContent = L.note + extra + (meta.mock && !L.real ? " · ข้อมูลจำลอง" : "");
 }
@@ -498,7 +499,7 @@ function setupOverlays() {
       cb.onchange = () => { if (cb.checked) layer.addTo(map); else map.removeLayer(layer); on[o.id] = cb.checked; drawLeg(); }; };
     const missing = () => { cb.disabled = true; lab.classList.add("na"); lab.insertAdjacentHTML("beforeend", " <small>(ยังไม่มีข้อมูล)</small>"); };
     if (o.data) ready(o.data);
-    else if (o.url) fetch(o.url).then(r => r.ok ? r.json() : Promise.reject()).then(gj => gj.features && gj.features.length ? ready(gj) : missing()).catch(missing);
+    else if (o.url) fetch(o.url, {cache: "no-cache"}).then(r => r.ok ? r.json() : Promise.reject()).then(gj => gj.features && gj.features.length ? ready(gj) : missing()).catch(missing);
     else missing();
   });
 }
@@ -539,7 +540,7 @@ function showDetail(pc) {
     <button type="button" class="backlink" id="back-am">← กลับไปภาพรวมอำเภอ</button>
     <div class="head"><div><div class="eyebrow">อ.${p.amphoe} · ${p.pcode}</div><h2>ต.${p.tambon}</h2></div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><span class="muted" style="font-size:.75rem">ระดับเตือนเดือนล่าสุด</span>${pill(p.alert_now)}</div></div>
-    <div class="action p${p.alert_now}">${ALERT[p.alert_now].act}</div>
+    <div class="action p${p.alert_now}">${AL(p.alert_now).act}</div>
     <div class="bars" style="grid-template-columns:auto 1fr 1fr">
       <span></span><b style="font-size:.78rem">ล่าสุด</b><b class="muted" style="font-size:.78rem">คาดการณ์ ${FM[0]} / ${FM[1]}</b>
       <span>แล้งเกษตร (CDI)</span>${chip("CDI",p.agri_now)}<span class="muted" style="font-size:.8rem">${CATS.CDI.labels[p.agri_f1]} / ${CATS.CDI.labels[p.agri_f2]}</span>
@@ -587,8 +588,8 @@ function renderTable() {
     .sort((a,b) => b.alert_now - a.alert_now || b.alert_f1 - a.alert_f1 || b.alert_f2 - a.alert_f2 || b.vuln - a.vuln);
   document.getElementById("f-count").textContent = `${rows.length} ตำบล`;
   document.getElementById("tbody").innerHTML = rows.map(p => `<tr data-pc="${p.pcode}" tabindex="0" class="${p.pcode===selected?"sel":""}">
-    <td>${p.tambon}</td><td>${p.amphoe}</td><td>${pill(p.alert_now)}</td><td>${ALERT[p.alert_now].act}</td>
-    <td>${ALERT[p.alert_f1].t} / ${ALERT[p.alert_f2].t}</td><td>${CATS.CDI.labels[p.agri_now]}</td><td>${CATS.HAZ.labels[p.haz_now]}</td><td class="n">${p.vuln_years}</td>
+    <td>${p.tambon}</td><td>${p.amphoe}</td><td>${pill(p.alert_now)}</td><td>${AL(p.alert_now).act}</td>
+    <td>${AL(p.alert_f1).t} / ${AL(p.alert_f2).t}</td><td>${CATS.CDI.labels[p.agri_now]}</td><td>${CATS.HAZ.labels[p.haz_now]}</td><td class="n">${p.vuln_years}</td>
     <td class="n">${p.pop_2020 ? Math.round(p.pop_2020).toLocaleString("th-TH") : "–"}</td></tr>`).join("");
 }
 
@@ -648,9 +649,11 @@ function renderExecutive(monthTH) {
 }
 
 async function init() {
-  const get = u => fetch(u).then(r => { if (!r.ok) throw new Error(u); return r.json(); });
+  const get = u => fetch(u, {cache: "no-cache"}).then(r => { if (!r.ok) throw new Error(u); return r.json(); });
   [geo, ts, meta] = await Promise.all([get("data/tambons.geojson"), get("data/timeseries.json"), get("data/meta.json")]);
   // action level = the higher of "now" and "December outlook" (precautionary)
+  if (geo.features.length && geo.features[0].properties.alert_f1 === undefined)
+    throw new Error("ไฟล์ data/tambons.geojson เป็นรุ่นเก่า ให้รัน compute_indices.py ใหม่ หรือรีเฟรชหน้า (Ctrl/Cmd+Shift+R)");
   geo.features.forEach(f => byPc[f.properties.pcode] = f.properties);
   FM = (meta.forecast_months || []).map(d => monthTH(d)); FM.now = monthTH(meta.now_month);
   LAYERS.forEach(L => { if (L.label) { L.label = L.label.replace("{f1}", FM[0]).replace("{f2}", FM[1]); L.note = L.note.replace("{f1}", FM[0]).replace("{f2}", FM[1]); } });
@@ -680,8 +683,8 @@ async function init() {
   setupBasemaps();
   gLayer = L.geoJSON(geo, {style, onEachFeature:(f,l) => {
     l.bindTooltip(() => { const p=f.properties, v=val(p, current);
-      let t = `<b>ต.${p.tambon}</b> อ.${p.amphoe}<br>${current.type==="alert" ? ALERT[v].t + (v ? " · " + ALERT[v].act : "") : current.type==="cat" ? CATS[current.cats].labels[v] : current.label+": "+fmt(v)}`;
-      if (current.id === "alert_now" && histIdx == null) t += `<br><span style="opacity:.7">คาดการณ์ ${FM[0]}: ${ALERT[p.alert_f1].t} · ${FM[1]}: ${ALERT[p.alert_f2].t}</span>`;
+      let t = `<b>ต.${p.tambon}</b> อ.${p.amphoe}<br>${current.type==="alert" ? AL(v).t + (v ? " · " + AL(v).act : "") : current.type==="cat" ? CATS[current.cats].labels[v] : current.label+": "+fmt(v)}`;
+      if (current.id === "alert_now" && histIdx == null) t += `<br><span style="opacity:.7">คาดการณ์ ${FM[0]}: ${AL(p.alert_f1).t} · ${FM[1]}: ${AL(p.alert_f2).t}</span>`;
       return t; }, {sticky:true});
     byPcFeature[f.properties.pcode] = f;
     l.on("click", () => showDetail(f.properties.pcode));
@@ -714,5 +717,8 @@ async function init() {
   renderTable();
 
 }
-init().catch(e => { document.getElementById("detail").innerHTML = `<div class="empty">โหลดข้อมูลไม่สำเร็จ (${e.message}) ตรวจว่าโฟลเดอร์ data/ อยู่คู่กับ index.html</div>`; });
+init().catch(e => { console.error(e);
+  const box = document.getElementById("headline"); if (box) box.textContent = "โหลดข้อมูลไม่สำเร็จ";
+  const sub = document.getElementById("subline"); if (sub) sub.textContent = e.message + " · ตรวจว่าโฟลเดอร์ data/ อยู่คู่กับ index.html";
+  const d = document.getElementById("detail"); if (d) { d.hidden = false; d.innerHTML = `<div class="empty">โหลดข้อมูลไม่สำเร็จ (${e.message})</div>`; } });
 </script>
