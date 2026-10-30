@@ -50,11 +50,32 @@ header{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-co
 @media (max-width:600px){.masthead{padding:22px 18px 64px}}
 .masthead .contours{position:absolute;right:-60px;top:-40px;height:150%;width:auto;color:var(--on-ink);opacity:.09;pointer-events:none}
 .masthead .eyebrow{color:var(--on-ink-accent)}
-.masthead h1{font-size:1.15rem;font-weight:500;color:var(--on-ink-muted)}
+.masthead header{align-items:flex-start}
+.mh-title{display:flex;flex-direction:column;gap:6px;max-width:44rem}
+.masthead h1{font-size:clamp(1.5rem,3vw,2.15rem);font-weight:500;line-height:1.2;color:#fff}
+.masthead .tagline{margin:0;color:var(--on-ink-muted);font-size:1rem}
+/* ENSO box: colour = what the current ENSO phase means for Sukhothai dry-season rain */
+.enso{border-radius:12px;padding:10px 14px;min-width:200px;display:flex;flex-direction:column;gap:2px;border:1px solid transparent}
+.enso .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.enso b{font:500 1.15rem var(--mono)}
+.enso .lv{font:500 .72rem var(--body);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.enso .what{font-size:.8rem;opacity:.9}
+.enso.e3{background:var(--a3-soft);color:#5e1a12;border-color:var(--a3)} .enso.e3 .lv{background:var(--a3);color:#fff}
+.enso.e2{background:var(--a2-soft);color:var(--a2-ink);border-color:var(--a2)} .enso.e2 .lv{background:var(--a2);color:#fff}
+.enso.e1{background:var(--a1-soft);color:var(--a1-ink);border-color:var(--a1)} .enso.e1 .lv{background:var(--a1);color:var(--a1-ink)}
+.enso.e0{background:#e2f1e6;color:#1d4a2b;border-color:#7fbf8f} .enso.e0 .lv{background:#3f8f57;color:#fff}
+.enso.ewet{background:#dcebf7;color:#163a5c;border-color:#6aa3d4} .enso.ewet .lv{background:#2f73b0;color:#fff}
+.enso .eyebrow{color:inherit!important;opacity:.75}
+/* executive message: changes every month, so it sits in its own box under the fixed title */
+.mh-brief{background:rgb(255 255 255 / .06);border:1px solid rgb(255 255 255 / .12);border-left:5px solid var(--on-ink-muted);border-radius:12px;padding:14px 18px}
+.mh-brief.b3{border-left-color:var(--a3)} .mh-brief.b2{border-left-color:var(--a2)} .mh-brief.b1{border-left-color:var(--a1)} .mh-brief.b0{border-left-color:#7fbf8f}
+.brief-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.brief-lv{font:500 .72rem var(--body);border-radius:999px;padding:2px 9px}
+.brief-lv:empty{display:none}
 .masthead .stat{background:rgb(255 255 255 / .07);border:1px solid rgb(255 255 255 / .14);color:var(--on-ink)}
 .masthead .stat span:last-child{color:var(--on-ink-muted);font-size:.8rem}
 .mh-brief{position:relative;display:flex;flex-direction:column;gap:10px}
-.masthead h2#headline{font-size:clamp(1.5rem,3.2vw,2.3rem);line-height:1.25;max-width:26ch;color:#fff}
+.masthead h2#headline{font-size:clamp(1.15rem,2.2vw,1.5rem);line-height:1.35;max-width:40ch;color:#fff}
 .masthead .sub{color:var(--on-ink-muted);max-width:72ch;margin:0}
 .lift{margin-top:-74px;padding:0 16px;position:relative}
 @media (max-width:600px){.lift{padding:0 8px}}
@@ -218,16 +239,15 @@ th{text-transform:none;letter-spacing:.02em}
       </g>
     </svg>
     <header>
-      <div>
+      <div class="mh-title">
         <div class="eyebrow">จังหวัดสุโขทัย · 86 ตำบล · ข้อมูลถึง <span id="m-now">–</span> · ต้นแบบ</div>
-        <h1>ภัยแล้งรายตำบล: ต้องเตรียมอะไร ที่ไหน</h1>
+        <h1>ระบบเฝ้าระวังภัยแล้งรายตำบล จังหวัดสุโขทัย</h1>
+        <p class="tagline">ต้องเตรียมอะไร ที่ไหน สำหรับน้ำกินน้ำใช้และการเกษตร</p>
       </div>
-      <div class="status">
-        <div class="stat"><span class="eyebrow">ENSO ต.ค. 2569</span><b>Niño 3.4 +3.3°C</b><span>El Niño แรงมาก</span></div>
-      </div>
+      <div class="status"><div class="enso" id="enso"></div></div>
     </header>
-    <div class="mh-brief">
-      <div class="eyebrow">สรุปสำหรับผู้บริหาร · สถานการณ์ล่าสุด</div>
+    <div class="mh-brief" id="brief">
+      <div class="brief-top"><span class="eyebrow" id="brief-label">สรุปสำหรับผู้บริหาร · สถานการณ์ล่าสุด</span><span class="brief-lv" id="brief-lv"></span></div>
       <h2 id="headline">กำลังโหลดข้อมูล…</h2>
       <p class="sub" id="subline"></p>
     </div>
@@ -607,6 +627,22 @@ const ICONS = {
   2: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9"/><path d="M12 12c0-4 3-7 7-7 0 4-3 7-7 7z"/><path d="M12 14c0-3.3-2.5-6-6-6 0 3.3 2.5 6 6 6z"/><path d="M5 21h14"/></svg>',
   1: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>'
 };
+// ENSO: update value + month each month (NOAA CPC weekly Niño 3.4 anomaly). Thresholds follow CPC/ONI conventions;
+// the meaning for Sukhothai follows the El Niño -> drier dry season link used for the analog years (2015, 2019, 2023).
+const ENSO = {month: "ต.ค. 2569", nino34: 3.3};
+function ensoClass(v) {
+  if (v >= 2.0) return {c: "e3", lv: "เร่งด่วน", ph: "El Niño แรงมาก", what: "ฝนหน้าแล้งมีแนวโน้มน้อยกว่าปกติมาก"};
+  if (v >= 1.5) return {c: "e2", lv: "เตือน", ph: "El Niño แรง", what: "ฝนหน้าแล้งมีแนวโน้มน้อยกว่าปกติ"};
+  if (v >= 0.5) return {c: "e1", lv: "เฝ้าระวัง", ph: "El Niño อ่อน–ปานกลาง", what: "ฝนอาจน้อยกว่าปกติเล็กน้อย"};
+  if (v > -0.5) return {c: "e0", lv: "ปกติ", ph: "สภาวะเป็นกลาง", what: "ไม่มีสัญญาณผิดปกติจากมหาสมุทร"};
+  return {c: "ewet", lv: "ฝนมาก", ph: "La Niña", what: "ฝนมีแนวโน้มมากกว่าปกติ"};
+}
+function renderEnso() {
+  const e = ensoClass(ENSO.nino34), el = document.getElementById("enso");
+  el.className = "enso " + e.c;
+  el.innerHTML = `<div class="row"><span class="eyebrow">ENSO ${ENSO.month}</span><span class="lv">${e.lv}</span></div>
+    <b>Niño 3.4 ${ENSO.nino34 > 0 ? "+" : ""}${ENSO.nino34.toFixed(1)}°C</b><span>${e.ph}</span><span class="what">${e.what}</span>`;
+}
 const people = n => n >= 1000 ? `${Math.round(n / 1000).toLocaleString("th-TH")},000` : Math.round(n).toLocaleString("th-TH");
 function renderExecutive(monthTH) {
   const P = geo.features.map(f => f.properties);
@@ -618,12 +654,19 @@ function renderExecutive(monthTH) {
   else if (n2) h.textContent = `${n2} ตำบลควรเตือนเกษตรกรก่อนฤดูนาปรัง และเฝ้าระวังอีก ${n1} ตำบล`;
   else if (n1) h.textContent = `ยังไม่ต้องแจกจ่ายน้ำหรือเตือนเกษตร แต่ควรเฝ้าระวัง ${n1} ตำบล`;
   else h.textContent = "ยังไม่พบสัญญาณภัยแล้ง";
+  const top = n3 ? 3 : n2 ? 2 : n1 ? 1 : 0;
+  document.getElementById("brief").className = "mh-brief b" + top;
+  const blv = document.getElementById("brief-lv");
+  blv.textContent = ["ปกติ", "เฝ้าระวัง", "เร่งด่วน", "เร่งด่วนที่สุด"][top];
+  blv.style.background = top ? `var(--a${top})` : "#3f8f57"; blv.style.color = top === 1 ? "var(--a1-ink)" : "#fff";
+  document.getElementById("brief-label").textContent = `สรุปสำหรับผู้บริหาร · สถานการณ์เดือน ${monthTH}`;
+  renderEnso();
   const atRisk = P.filter(p => p.alert_now >= 1);
   const ge = (k, a) => P.filter(p => p[k] >= a).length;
   const trend = k => { const d = ge(k, 1) - atRisk.length; return d > 0 ? `เพิ่มเป็น ${ge(k, 1)} ตำบล` : d < 0 ? `ลดเหลือ ${ge(k, 1)} ตำบล` : `ทรงตัวที่ ${ge(k, 1)} ตำบล`; };
   document.getElementById("subline").innerHTML =
     `สถานการณ์จากข้อมูลดาวเทียมเดือน ${monthTH} ประชากรในตำบลที่มีระดับเตือนราว ${people(pop(atRisk))} คน จาก ${people(pop(P))} คน<br>` +
-    `<span style="opacity:.85">คาดการณ์ระยะสั้น: ตำบลที่มีระดับเตือน ${FM[0]} ${trend("alert_f1")} · ${FM[1]} ${trend("alert_f2")} · El Niño ยังแรง</span>`;
+    `<span style="opacity:.85">คาดการณ์ระยะสั้น: ตำบลที่มีระดับเตือน ${FM[0]} ${trend("alert_f1")} · ${FM[1]} ${trend("alert_f2")}</span>`;
   [3, 2, 1].forEach(a => {
     const arr = lv(a), el = document.getElementById("act" + a), A = ACTIONS[a];
     const byAm = {}; arr.forEach(p => byAm[p.amphoe] = (byAm[p.amphoe] || 0) + 1);
