@@ -26,7 +26,12 @@
   --bg:#0e1413; --bg2:#111917; --ink:#0f2a2d; --ink2:#14393e; --shadow:0 0 0 1px #24302e; --surface:#172020; --line:#26312f; --fg:#e4ebe9; --muted:#9aa8a5;
   --accent:#5cc2d6; --accent-soft:#16343a; --a0:#2a3331; --mock:#3a3112; --mock-ink:#f3dc8a; --edge:#19211f; --a1-soft:#33301a; --a2-soft:#3a2a1c; --a3-soft:#3b2220; color-scheme:dark}
 *{box-sizing:border-box}
-body{background:linear-gradient(180deg,var(--bg) 0,var(--bg2) 520px) var(--bg2);color:var(--fg);font:300 15px/1.65 var(--body);
+/* site background: Sukhothai from the air (Chainwit., CC BY 4.0, Wikimedia Commons); fixed layer + tint so cards stay readable */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 35%,transparent) 0,color-mix(in srgb,var(--bg2) 72%,transparent) 60vh,color-mix(in srgb,var(--bg2) 82%,transparent) 100%),
+    url("https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Sukhothai_Airport_at_take-off_%282025-09%29_-_img_07.jpg/1920px-Sukhothai_Airport_at_take-off_%282025-09%29_-_img_07.jpg") center/cover no-repeat var(--bg2)}
+footer .credit{display:block;margin-top:4px;font-size:.75rem}
+body{background:var(--bg2);color:var(--fg);font:300 15px/1.65 var(--body);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
 .wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
 h1,h2,h3{font-family:var(--display);font-weight:500;margin:0;text-wrap:balance;line-height:1.25}
@@ -341,7 +346,8 @@ th{text-transform:none;letter-spacing:.02em}
     </div>
     </div>
   </details>
-  <footer>ต้นแบบเพื่อนำเสนอแนวคิด ยังไม่ใช่ข้อมูลทางการ · ไฟล์ข้อมูลอยู่ในโฟลเดอร์ data/ ของ repository</footer>
+  <footer>ต้นแบบเพื่อนำเสนอแนวคิด ยังไม่ใช่ข้อมูลทางการ · ไฟล์ข้อมูลอยู่ในโฟลเดอร์ data/ ของ repository
+    <span class="credit">ภาพพื้นหลัง: <a href="https://commons.wikimedia.org/wiki/File:Sukhothai_Airport_at_take-off_(2025-09)_-_img_07.jpg" target="_blank" rel="noopener">Sukhothai Airport at take-off</a> โดย Chainwit. · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> · Wikimedia Commons</span></footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -697,6 +703,10 @@ async function init() {
   setupOverlays();
   map.getContainer().addEventListener("mouseleave", () => hoverLayer.clearLayers());
   map.fitBounds(gLayer.getBounds(), {padding:[8,8]});
+  // if the map was laid out at zero width (hidden tab, slow layout), refit once it gets a real size
+  let wasEmpty = map.getSize().x === 0;
+  if (window.ResizeObserver) new ResizeObserver(() => { map.invalidateSize();
+    if (wasEmpty && map.getSize().x > 0) { wasEmpty = false; map.fitBounds(gLayer.getBounds(), {padding:[8,8]}); } }).observe(document.getElementById("map"));
   new ResizeObserver(() => map.invalidateSize()).observe(document.getElementById("map"));
   DATES = ts[Object.keys(ts)[0]].dates;
   const sl = document.getElementById("t-slider");
