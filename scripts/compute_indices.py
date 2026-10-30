@@ -418,8 +418,11 @@ def reservoirs_overlay(path, out):
         pct = None
         if pd.notna(r.get("storage_mcm")) and pd.notna(r.get("capacity_mcm")) and r["capacity_mcm"] > 0:
             pct = round(float(r["storage_mcm"]) / float(r["capacity_mcm"]) * 100, 1)
-        props = {k: (None if pd.isna(r.get(k)) else r.get(k)) for k in ["name", "type", "tambon", "amphoe", "capacity_mcm", "storage_mcm", "date"]}
+        props = {k: (None if pd.isna(r.get(k)) else r.get(k)) for k in ["name", "type", "tambon", "amphoe", "capacity_mcm", "storage_mcm", "date",
+                                                                          "storage_prev_mcm", "usable_mcm", "source"] if k in r}
         props["pct"] = pct
+        if props.get("storage_prev_mcm") is not None and pct is not None:   # same date last year (RID reports it)
+            props["pct_prev"] = round(float(r["storage_prev_mcm"]) / float(r["capacity_mcm"]) * 100, 1)
         feats.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [round(float(r["lon"]), 5), round(float(r["lat"]), 5)]},
                       "properties": json.loads(json.dumps(props, default=str))})
     os.makedirs(os.path.join(out, "overlays"), exist_ok=True)

@@ -359,7 +359,7 @@ th{text-transform:none;letter-spacing:.02em}
         <li>ประวัติภัย: ปภ. dpm-gd016 หมู่บ้านในพื้นที่ภัยแล้ง 2560–2567 และ dpm-gd028 ประกาศเขตภัย ปีงบ 2562–2568</li>
         <li>ความเสี่ยงภัยแล้งรายหมู่บ้าน 866 หมู่บ้าน (ระดับความเสี่ยง, ผลกระทบน้ำดื่ม/น้ำเกษตร): ปภ. บริการ drought_region (gis-portal.disaster.go.th, CC-BY)</li>
         <li>เขตชลประทาน: รอข้อมูลทางการจากกรมชลประทาน · ระหว่างนี้ใช้ค่าประมาณจากพื้นที่เกษตรที่ยังเขียวในฤดูแล้ง (MODIS) ได้ · ตำบลที่พื้นที่เกษตร ≥ 50% อยู่ในเขตชลประทาน ต้องมีแล้งเกษตรสูงขึ้นอีกหนึ่งขั้นจึงจะเตือนเกษตร</li>
-        <li>แม่น้ำ: HydroSHEDS ผ่าน Earth Engine · อ่างเก็บน้ำ: ข้อมูลจากโครงการชลประทานสุโขทัย (ช่องรับข้อมูล intake/)</li>
+        <li>แม่น้ำ: HydroSHEDS ผ่าน Earth Engine · อ่างเก็บน้ำขนาดกลาง 7 แห่ง: ตำแหน่งและปริมาณน้ำจากระบบฐานข้อมูลน้ำในอ่างเก็บน้ำ กรมชลประทาน (app.rid.go.th/reservoir) อัปเดตผ่าน raw/reservoirs.csv</li>
         <li>ขอบเขตตำบล: กรมแผนที่ทหาร ผ่าน HDX COD-AB</li>
         <li>ประชากร: WorldPop 2020 · การใช้ที่ดิน: ESA WorldCover</li>
       </ul>
@@ -507,9 +507,14 @@ function setupOverlays() {
     {id: "rivers", label: "แม่น้ำสายหลัก", url: "data/overlays/rivers.geojson",
      make: gj => L.geoJSON(gj, {pane: "ov", interactive: false, style: f => ({color: "#2f7fb5", weight: (f.properties.ord || 6) <= 4 ? 2.6 : 1.4, opacity: .9})})},
     {id: "reservoirs", label: "อ่างเก็บน้ำ (กรมชลประทาน)", url: "data/overlays/reservoirs.geojson",
-     make: gj => L.geoJSON(gj, {pane: "ov", pointToLayer: (f, ll) => L.circleMarker(ll, {pane: "ov", radius: 6, weight: 1.5, color: "#fff", fillColor: resColor(f.properties.pct), fillOpacity: 1}),
+     make: gj => L.geoJSON(gj, {pane: "ov", pointToLayer: (f, ll) => L.circleMarker(ll, {pane: "ov", radius: 5 + Math.min(7, Math.sqrt(f.properties.capacity_mcm || 4)), weight: 2, color: "#fff", fillColor: resColor(f.properties.pct), fillOpacity: 1}),
        onEachFeature: (f, l) => { const p = f.properties;
-        l.bindTooltip(`<b>${p.name}</b>${p.type ? " (" + p.type + ")" : ""}<br>น้ำในอ่าง ${p.pct == null ? "–" : p.pct + "%"}${p.storage_mcm != null ? ` · ${p.storage_mcm}/${p.capacity_mcm} ล้าน ลบ.ม.` : ""}${p.date ? "<br>ข้อมูล " + p.date : ""}`); }}),
+        const diff = p.pct_prev != null && p.pct != null ? Math.round(p.pct - p.pct_prev) : null;
+        l.bindTooltip(`<b>${p.name}</b>${p.type ? " (" + p.type + ")" : ""}${p.tambon ? `<br>ต.${p.tambon} อ.${p.amphoe}` : ""}` +
+          `<br>น้ำในอ่าง <b>${p.pct == null ? "–" : p.pct + "%"}</b>${p.storage_mcm != null ? ` · ${p.storage_mcm}/${p.capacity_mcm} ล้าน ลบ.ม.` : ""}` +
+          `${p.usable_mcm != null ? `<br>ใช้การได้ ${p.usable_mcm} ล้าน ลบ.ม.` : ""}` +
+          `${diff != null ? `<br>ปีที่แล้ววันเดียวกัน ${p.pct_prev}% (${diff > 0 ? "+" : ""}${diff} จุด)` : ""}` +
+          `${p.date ? `<br><span style="opacity:.7">ข้อมูล ${p.date} · กรมชลประทาน</span>` : ""}`); }}),
      legend: () => [["< 30%", "#c23a2c"], ["30–60%", "#e0a12f"], ["> 60%", "#1f6fa8"]].map(([t, c]) => `<span class="tag"><span class="sw" style="background:${c}"></span>อ่าง ${t}</span>`).join("")},
     {id: "irrigation", label: "ตำบลในเขตชลประทาน", data: irrFeats.length ? {type: "FeatureCollection", features: irrFeats} : null,
      make: gj => L.geoJSON(gj, {pane: "ov", interactive: false, style: () => ({fill: false, color: "#1f5f8b", weight: 1.6, dashArray: "5 4"})}),
