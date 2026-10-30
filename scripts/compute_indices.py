@@ -431,6 +431,30 @@ def reservoirs_overlay(path, out):
     return len(feats)
 
 
+def rivers_overlay(path, out):
+    """raw/rivers_sukhothai.geojson (HydroRIVERS / Free-Flowing Rivers via Earth Engine) -> data/overlays/rivers.geojson, coords rounded."""
+    if not path or not os.path.exists(path):
+        return None
+    g = json.load(open(path, encoding="utf-8"))
+    rnd = lambda c: [round(c[0], 5), round(c[1], 5)]
+    feats = []
+    for f in g.get("features", []):
+        geom = f["geometry"]
+        if geom["type"] == "LineString":
+            coords = [rnd(c) for c in geom["coordinates"]]
+        elif geom["type"] == "MultiLineString":
+            coords = [[rnd(c) for c in l] for l in geom["coordinates"]]
+        else:
+            continue
+        p = f.get("properties", {})
+        feats.append({"type": "Feature", "geometry": {"type": geom["type"], "coordinates": coords},
+                      "properties": {"ord": p.get("ord", p.get("RIV_ORD")), "dis": p.get("dis", p.get("DIS_AV_CMS"))}})
+    os.makedirs(os.path.join(out, "overlays"), exist_ok=True)
+    json.dump({"type": "FeatureCollection", "features": feats}, open(os.path.join(out, "overlays", "rivers.geojson"), "w"), separators=(",", ":"))
+    print(f"[rivers] {len(feats)} เส้น -> overlays/rivers.geojson")
+    return len(feats)
+
+
 def load_vuln(path):
     """DDPM dpm-gd016 tambon summary: years with villages in drought areas, 2560-2567."""
     if not path or not os.path.exists(path):
@@ -470,6 +494,7 @@ if __name__ == "__main__":
     ap.add_argument("--irrigation", default="raw/irrigation_tambon.csv", help="optional tambon irrigation share CSV")
     ap.add_argument("--ddpm-risk", default="data/source/ddpm_drought_region_villages_64.json")
     ap.add_argument("--reservoirs", default="raw/reservoirs.csv", help="optional reservoir list with storage (from RID)")
+    ap.add_argument("--rivers", default="raw/rivers_sukhothai.geojson", help="river lines from the notebook overlay cell")
     ap.add_argument("--external", default="raw/external", help="folder of external indices (one sub-folder each)")
     ap.add_argument("--pop-factor", type=float, default=1.0, help="divide population by this (fix for old static export)")
     a = ap.parse_args()
@@ -481,8 +506,13 @@ if __name__ == "__main__":
     ts = compute(d, geo)
     print("validation AUC vs DDPM 2019/20 (0.5 = no skill):", validate(ts, geo))
     reservoirs_overlay(a.reservoirs, a.out)
-    irr = load_irrigation(a.irrigation)
+    rivers_overlay(a.rivers, a.out)
     d.setdefault("notes", [])
+    irr_path = a.irrigation
+    if not os.path.exists(irr_path or "") and os.path.exists(os.path.join(os.path.dirname(irr_path or "raw/x"), "irrigation_proxy.csv")):
+        irr_path = os.path.join(os.path.dirname(irr_path), "irrigation_proxy.csv")   # notebook estimate until RID sends the official layer
+        d["notes"].append("เขตชลประทานใช้ค่าประมาณจากดาวเทียม (พื้นที่เกษตรที่เขียวในหน้าแล้ง MODIS NDVI ก.พ.–มี.ค.) ระหว่างรอขอบเขตโครงการจากกรมชลประทาน")
+    irr = load_irrigation(irr_path)
     if not irr:
         d["notes"].append("ยังไม่มีขอบเขตพื้นที่ชลประทาน ระดับเตือนเกษตรยังไม่ได้ปรับตามเขตชลประทาน")
     meta = write(ts, geo, d, a.out, a.mock, load_vuln(a.vuln), irr, load_ddpm_risk(a.ddpm_risk))
