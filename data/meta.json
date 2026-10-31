@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-30 12:09",
+ "generated": "2026-10-31 09:38",
  "mock": false,
  "now_month": "2026-09",
  "latest_by_indicator": {
@@ -41,7 +41,85 @@
  },
  "notes": [
   "พื้นที่ผิวน้ำ Sentinel-2 ยังวัดทั้งตำบล (ปนนาข้าว) จึงแสดงเป็นชั้นข้อมูลแต่ไม่นำเข้าดัชนีน้ำกิน",
-  "เขตชลประทานใช้ค่าประมาณจากดาวเทียม (พื้นที่เกษตรที่เขียวในหน้าแล้ง MODIS NDVI ก.พ.–มี.ค.) ระหว่างรอขอบเขตโครงการจากกรมชลประทาน"
+  "เขตชลประทานใช้ค่าประมาณจากดาวเทียม (พื้นที่เกษตรที่เขียวในหน้าแล้ง MODIS NDVI ก.พ.–มี.ค.) ระหว่างรอขอบเขตโครงการจากกรมชลประทาน",
+  "ยังไม่มีข้อมูลครัวเรือนที่ไม่มีประปา ระดับเตือนน้ำกินยังใช้เฉพาะประวัติภัยแล้งของ ปภ.",
+  "ยังไม่มีแผนจัดสรรน้ำฤดูแล้งของกรมชลประทาน ใช้สัดส่วนเขตชลประทานแทน"
  ],
+ "kpi": {
+  "tambons": 86,
+  "indicators": [
+   "rain_mm",
+   "spi1",
+   "spi3",
+   "spi6",
+   "spei3",
+   "sm_z",
+   "smdeep_z",
+   "veg_z",
+   "vci",
+   "tci",
+   "vhi",
+   "water_z"
+  ],
+  "backtest": {
+   "events": 34,
+   "tambons_with_events": 34,
+   "event_months": [
+    "2019-06",
+    "2019-12",
+    "2020-06"
+   ],
+   "by_level": {
+    "1": {
+     "hit_rate": 1.0,
+     "hits": 34,
+     "events": 34,
+     "lead_median_months": 6.0,
+     "precision": 0.4,
+     "alerted_tambons": 86
+    },
+    "2": {
+     "hit_rate": 0.97,
+     "hits": 33,
+     "events": 34,
+     "lead_median_months": 2.0,
+     "precision": 0.41,
+     "alerted_tambons": 82
+    }
+   }
+  }
+ },
+ "local": {
+  "water_supply": false,
+  "rid_allocation": false,
+  "impact_reports": false,
+  "outlook": true,
+  "irrigation_official": false,
+  "irrigation_proxy": true,
+  "reservoirs": true,
+  "rivers": true
+ },
+ "outlook": {
+  "enso": {
+   "nino34": 2.1,
+   "month": "ก.ย. 2569",
+   "status": "El Niño Advisory",
+   "source": "NOAA CPC ENSO Diagnostic Discussion 8 ต.ค. 2569",
+   "url": "https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/ensodisc.shtml"
+  },
+  "tmd": {
+   "period": null,
+   "rain_category": null,
+   "rain_pct_of_normal": null,
+   "source": null,
+   "url": null,
+   "_help": "rain_category: below | near | above (ต่ำกว่า/ใกล้เคียง/สูงกว่าค่าปกติ) จากการคาดหมายราย 3 เดือนของกรมอุตุนิยมวิทยา ภาคเหนือตอนล่าง"
+  },
+  "crop_calendar": {
+   "naprang_plant_month": 12,
+   "warn_by_month": 11,
+   "note": "นาปรังเริ่มปลูก ธ.ค. เตือนเกษตรกรภายใน พ.ย. (ค่าตั้งต้น ต้องยืนยันกับเกษตรจังหวัดและโครงการชลประทาน)"
+  }
+ },
  "external": []
 }

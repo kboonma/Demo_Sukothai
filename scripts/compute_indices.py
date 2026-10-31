@@ -264,20 +264,46 @@ WATER_MATRIX = {   # (vulnerability, hazard) -> 0 none, 1 watch, 3 prepare water
 IRR_SHARE_MIN = 0.5   # tambon counted as irrigated when >= 50% of its cropland is inside RID irrigation areas
 
 
-def alert(agri_level, water_haz, vuln, crop_frac, irr_share=None):
-    # inside irrigation areas farmers can still get canal water: farmer warning needs one CDI level more
-    if irr_share is not None and irr_share >= IRR_SHARE_MIN:
+def alert(agri_level, water_haz, vuln, crop_frac, irr_share=None, alloc=None, dry_season=True):
+    """alloc: RID dry-season plan for the tambon ("full" | "reduced" | "none"), overrides the irrigation-share rule."""
+    status = (alloc or {}).get("status") if isinstance(alloc, dict) else alloc
+    if status == "full" or (status is None and irr_share is not None and irr_share >= IRR_SHARE_MIN):
+        # canal water is coming: farmer warning needs one CDI level more
         agri_level = max(0, agri_level - 1)
     w = WATER_MATRIX[(vuln, int(water_haz))]
     if w == 3: return 3
     if agri_level >= 2 and crop_frac >= 0.10: return 2
+    # RID says no water for นาปรัง this dry season: farmers in the project area should be told before they buy inputs
+    if status == "none" and dry_season and crop_frac >= 0.10: return 2
     if agri_level >= 1 or w == 1: return 1
     return 0
 
 
+def alert_reasons(agri_level, water_haz, vuln, crop_frac, irr_share, alloc, supply):
+    """Plain-language reasons shown in the tambon panel (Thai)."""
+    r = []
+    if water_haz >= 1: r.append(f"สัญญาณขาดน้ำ {['', 'ปานกลาง', 'สูง'][int(water_haz)]} (ฝนสะสม 6 เดือน/ความชื้นดินชั้นล่าง)")
+    if vuln >= 1: r.append("เคยประกาศภัยแล้ง/หมู่บ้านเสี่ยงในอดีต" if vuln == 1 else "เคยประกาศภัยแล้งหลายปี")
+    if supply and supply.get("no_tap_share") is not None and supply["no_tap_share"] >= 0.30:
+        r.append(f"ครัวเรือนไม่มีประปา {supply['no_tap_share']:.0%}")
+    if agri_level >= 1: r.append(f"แล้งเกษตรระดับ {['', 'เฝ้าระวัง', 'เตือน', 'วิกฤต'][int(agri_level)]} (CDI)")
+    st = (alloc or {}).get("status")
+    if st == "none": r.append("กรมชลประทานงดส่งน้ำนาปรังฤดูแล้งนี้")
+    elif st == "reduced": r.append("กรมชลประทานจำกัดน้ำนาปรัง (ไม่ลดระดับเตือน)")
+    elif st == "full": r.append("กรมชลประทานส่งน้ำนาปรังตามปกติ (ลดระดับเตือนเกษตร 1 ขั้น)")
+    elif irr_share is not None and irr_share >= IRR_SHARE_MIN: r.append(f"อยู่ในเขตชลประทาน ~{irr_share:.0%} ของพื้นที่เกษตร (ลดระดับเตือนเกษตร 1 ขั้น)")
+    return r
+
+
+DRY = {11, 12, 1, 2, 3, 4}
+
+
 # ---------- write ----------
-def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None):
-    irr = irr or {}; ddpm_risk = ddpm_risk or {}
+def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None):
+    irr = irr or {}; ddpm_risk = ddpm_risk or {}; local = local or {}
+    supply = local.get("supply") or {}; alloc = local.get("alloc") or {}
+    from local_data import vuln_with_supply
+    hist_rows = []
     os.makedirs(out, exist_ok=True)
     st = d["static"].set_index("pcode")
     ts = ts.set_index(["pcode", "date"]).sort_index()
@@ -293,7 +319,10 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None):
         cur = t.loc[now]
         area = p.get("area_km2") or 1
         crop_frac = float(st.loc[pc, "crop_km2"] / area) if pc in st.index else 0
-        v = vuln.get(pc, {"level": 0, "years": 0, "villages": 0})
+        v = dict(vuln.get(pc, {"level": 0, "years": 0, "villages": 0}))
+        v_hist = v["level"]                                   # past alerts: rules of today, without this season's local data
+        v["level"] = vuln_with_supply(v["level"], supply.get(pc))
+        al = alloc.get(pc)
         # December outlook: each anomaly = half persistence of now + half the mean December anomaly of El Nino analog years
         dec = t[(t.index.month == 12) & (t.index.year.isin(ANALOG_YEARS))]
         zd = {c: (0.5 * cur[c] + 0.5 * dec[c].mean()) if pd.notna(cur[c]) else dec[c].mean() for c in zc}
@@ -311,9 +340,12 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None):
             zf = {c: (99 if pd.isna(x) else x) for c, x in zf.items()}
             ag = cdi_step(zf["spi1"], zf["spi3"], zf["sm_z"], zf["veg_z"], prev_lv, zf["ext_agri"])
             hz = min(2, int(zf["spi6"] <= -1) + int(zf["smdeep_z"] <= -1) + int(zf["water_z_idx"] <= -1) + int(zf["ext_water"] <= -1))
-            fc[k] = {"z": zf, "agri": ag, "haz": hz, "alert": alert(ag, hz, v["level"], crop_frac, irr.get(pc))}
+            fc[k] = {"z": zf, "agri": ag, "haz": hz, "alert": alert(ag, hz, v["level"], crop_frac, irr.get(pc), al, tgt.month in DRY)}
             prev_lv = ag
-        a_now = alert(int(cur["agri_level"]), int(cur["water_haz"]), v["level"], crop_frac, irr.get(pc))
+        a_now = alert(int(cur["agri_level"]), int(cur["water_haz"]), v["level"], crop_frac, irr.get(pc), al, now.month in DRY)
+        for dte, row in t[t.index >= "2015-01-01"].iterrows():
+            hist_rows.append((pc, dte, alert(int(row["agri_level"]), int(row["water_haz"]), v_hist, crop_frac, irr.get(pc))))
+        sp = supply.get(pc)
         a_dec = alert(agri_dec, haz_dec, v["level"], crop_frac)
         r = lambda x, n=2: None if pd.isna(x) else round(float(x), n)
         p.update({
@@ -326,6 +358,9 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None):
             "haz_now": int(cur["water_haz"]), "haz_dec": haz_dec,
             "vuln": v["level"], "vuln_years": v["years"], "vuln_villages": v["villages"],
             "irr_share": r(irr.get(pc)) if pc in irr else None,
+            "hh": sp["hh"] if sp else None, "hh_no_tap": sp["hh_no_tap"] if sp else None,
+            "no_tap_share": sp["no_tap_share"] if sp else None, "alloc": al["status"] if al else None,
+            "why": alert_reasons(int(cur["agri_level"]), int(cur["water_haz"]), v["level"], crop_frac, irr.get(pc), al, sp),
             **ddpm_risk.get(pc, {}),
             **{f"{c}_now": r(cur[c]) for c in ["spi3", "spi6", "sm_z", "veg_z", "vhi", "water_z"]},
             **{f"{c}_dec": r(zd[c]) if zd[c] != 99 else None for c in ["spi3", "spi6", "sm_z", "veg_z"]},
@@ -348,6 +383,8 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None):
             "alert_counts_f1": pd.Series([x["alert_f1"] for x in summary]).value_counts().to_dict(),
             "alert_counts_f2": pd.Series([x["alert_f2"] for x in summary]).value_counts().to_dict(),
             "notes": d.get("notes", []),
+            "kpi": local_kpis(hist_rows, local, geo, latest_month, cols),
+            "local": local.get("status", {}), "outlook": local.get("outlook", {}),
             "external": [{"id": em["id"], "name": em["name"], "units": em["units"], "kind": em["kind"], "use_in": em["use_in"],
                           "source": em.get("source", ""), "contact": em.get("contact", ""),
                           "first": em["report"]["first"], "last": em["report"]["last"], "tambons": em["report"]["tambons"],
@@ -359,6 +396,15 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None):
     pd.DataFrame(summary).sort_values(["alert_now", "alert_f1", "alert_f2", "vuln"], ascending=False).to_csv(
         os.path.join(out, "tambon_alerts.csv"), index=False, encoding="utf-8-sig")
     return meta
+
+
+def local_kpis(hist_rows, local, geo, latest_month, cols):
+    from local_data import system_kpis
+    hist = pd.DataFrame(hist_rows, columns=["pcode", "date", "alert"])
+    k = {"tambons": len(geo["features"]),
+         "indicators": [c for c in cols if pd.notna(latest_month[c])],
+         "backtest": system_kpis(hist, local.get("impacts"))}
+    return k
 
 
 def external_backtest(ts, col):
@@ -495,6 +541,8 @@ if __name__ == "__main__":
     ap.add_argument("--ddpm-risk", default="data/source/ddpm_drought_region_villages_64.json")
     ap.add_argument("--reservoirs", default="raw/reservoirs.csv", help="optional reservoir list with storage (from RID)")
     ap.add_argument("--rivers", default="raw/rivers_sukhothai.geojson", help="river lines from the notebook overlay cell")
+    ap.add_argument("--local", default="raw/local", help="province data: water_supply.csv, rid_allocation.csv, impact_reports.csv, outlook.json")
+    ap.add_argument("--ddpm-records", default="data/source/ddpm_sukhothai_records.csv", help="DDPM declarations with dates (impact events)")
     ap.add_argument("--external", default="raw/external", help="folder of external indices (one sub-folder each)")
     ap.add_argument("--pop-factor", type=float, default=1.0, help="divide population by this (fix for old static export)")
     a = ap.parse_args()
@@ -515,5 +563,18 @@ if __name__ == "__main__":
     irr = load_irrigation(irr_path)
     if not irr:
         d["notes"].append("ยังไม่มีขอบเขตพื้นที่ชลประทาน ระดับเตือนเกษตรยังไม่ได้ปรับตามเขตชลประทาน")
-    meta = write(ts, geo, d, a.out, a.mock, load_vuln(a.vuln), irr, load_ddpm_risk(a.ddpm_risk))
+    import local_data as LD
+    supply, f_sup = LD.load_water_supply(os.path.join(a.local, "water_supply.csv"), geo)
+    alloc, f_al = LD.load_allocation(os.path.join(a.local, "rid_allocation.csv"), geo)
+    impacts = LD.load_impacts(a.ddpm_records, os.path.join(a.local, "impact_reports.csv"), geo)
+    outlook = LD.load_outlook(os.path.join(a.local, "outlook.json"))
+    n_rep = int((impacts.source != "ปภ. ประกาศเขตภัยแล้ง").sum()) if len(impacts) else 0
+    status = {"water_supply": f_sup is not None, "rid_allocation": f_al is not None, "impact_reports": n_rep > 0,
+              "outlook": bool(outlook), "irrigation_official": os.path.exists(a.irrigation or ""),
+              "irrigation_proxy": bool(irr) and not os.path.exists(a.irrigation or ""),
+              "reservoirs": os.path.exists(a.reservoirs or ""), "rivers": os.path.exists(a.rivers or "")}
+    if not supply: d["notes"].append("ยังไม่มีข้อมูลครัวเรือนที่ไม่มีประปา ระดับเตือนน้ำกินยังใช้เฉพาะประวัติภัยแล้งของ ปภ.")
+    if not alloc: d["notes"].append("ยังไม่มีแผนจัดสรรน้ำฤดูแล้งของกรมชลประทาน ใช้สัดส่วนเขตชลประทานแทน")
+    local = {"supply": supply, "alloc": alloc, "impacts": impacts, "outlook": outlook, "status": status}
+    meta = write(ts, geo, d, a.out, a.mock, load_vuln(a.vuln), irr, load_ddpm_risk(a.ddpm_risk), local)
     print(json.dumps(meta, ensure_ascii=False, indent=1))

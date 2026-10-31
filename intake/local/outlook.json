@@ -1,0 +1,8 @@
+{
+ "enso": {"nino34": 2.1, "month": "ก.ย. 2569", "status": "El Niño Advisory",
+          "source": "NOAA CPC ENSO Diagnostic Discussion 8 ต.ค. 2569", "url": "https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/ensodisc.shtml"},
+ "tmd": {"period": null, "rain_category": null, "rain_pct_of_normal": null, "source": null, "url": null,
+         "_help": "rain_category: below | near | above (ต่ำกว่า/ใกล้เคียง/สูงกว่าค่าปกติ) จากการคาดหมายราย 3 เดือนของกรมอุตุนิยมวิทยา ภาคเหนือตอนล่าง"},
+ "crop_calendar": {"naprang_plant_month": 12, "warn_by_month": 11,
+                   "note": "นาปรังเริ่มปลูก ธ.ค. เตือนเกษตรกรภายใน พ.ย. (ค่าตั้งต้น ต้องยืนยันกับเกษตรจังหวัดและโครงการชลประทาน)"}
+}
