@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-31 09:38",
+ "generated": "2026-10-31 10:10",
  "mock": false,
  "now_month": "2026-09",
  "latest_by_indicator": {
@@ -88,6 +88,303 @@
     }
    }
   }
+ },
+ "esp": {
+  "issue": "2026-09",
+  "targets": [
+   "2026-10",
+   "2026-11",
+   "2026-12",
+   "2027-01"
+  ],
+  "ensemble": "nino",
+  "n_traces": 14,
+  "n_traces_all": 45,
+  "expected_act": [
+   9.3,
+   11.8,
+   8.3,
+   9.1
+  ],
+  "expected_water": [
+   5.5,
+   6.4,
+   2.9,
+   2.7
+  ],
+  "expected_watch": [
+   38.5,
+   36.0,
+   34.6,
+   32.7
+  ],
+  "likely_act": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "mean_p_act_all": [
+   0.08,
+   0.09,
+   0.08,
+   0.09
+  ],
+  "mean_p_act": [
+   0.11,
+   0.14,
+   0.1,
+   0.11
+  ],
+  "skill_this_issue": {
+   "issue_month": 9,
+   "years": "1981-2024",
+   "method": "leave-one-out, DAMP=0.25",
+   "skill": {
+    "1": {
+     "act": {
+      "base_rate": 0.069,
+      "auc_all": 0.78,
+      "auc_enso": 0.76,
+      "bss_all": 0.05,
+      "bss_enso": -0.01,
+      "bss_persist": -0.41
+     },
+     "cdi2": {
+      "base_rate": 0.091,
+      "auc_all": 0.73,
+      "auc_enso": 0.72,
+      "bss_all": 0.09,
+      "bss_enso": 0.04,
+      "bss_persist": -0.25
+     }
+    },
+    "2": {
+     "act": {
+      "base_rate": 0.089,
+      "auc_all": 0.68,
+      "auc_enso": 0.7,
+      "bss_all": -0.05,
+      "bss_enso": -0.08,
+      "bss_persist": -0.65
+     },
+     "cdi2": {
+      "base_rate": 0.108,
+      "auc_all": 0.51,
+      "auc_enso": 0.57,
+      "bss_all": -0.11,
+      "bss_enso": -0.13,
+      "bss_persist": -0.82
+     }
+    },
+    "3": {
+     "act": {
+      "base_rate": 0.089,
+      "auc_all": 0.69,
+      "auc_enso": 0.63,
+      "bss_all": 0.0,
+      "bss_enso": -0.05,
+      "bss_persist": -0.65
+     },
+     "cdi2": {
+      "base_rate": 0.121,
+      "auc_all": 0.57,
+      "auc_enso": 0.53,
+      "bss_all": 0.01,
+      "bss_enso": -0.03,
+      "bss_persist": -0.54
+     }
+    },
+    "4": {
+     "act": {
+      "base_rate": 0.092,
+      "auc_all": 0.7,
+      "auc_enso": 0.65,
+      "bss_all": 0.02,
+      "bss_enso": -0.03,
+      "bss_persist": -0.64
+     },
+     "cdi2": {
+      "base_rate": 0.117,
+      "auc_all": 0.61,
+      "auc_enso": 0.57,
+      "bss_all": 0.04,
+      "bss_enso": 0.02,
+      "bss_persist": -0.55
+     }
+    }
+   },
+   "cases": {
+    "2015": {
+     "p_act": [
+      0.24,
+      0.21,
+      0.17,
+      0.15
+     ],
+     "obs_act": [
+      0.12,
+      0.4,
+      0.15,
+      0.13
+     ]
+    },
+    "2018": {
+     "p_act": [
+      0.28,
+      0.29,
+      0.25,
+      0.21
+     ],
+     "obs_act": [
+      0.34,
+      0.03,
+      0.0,
+      0.0
+     ]
+    },
+    "2019": {
+     "p_act": [
+      0.26,
+      0.25,
+      0.24,
+      0.18
+     ],
+     "obs_act": [
+      0.7,
+      0.53,
+      0.71,
+      0.77
+     ]
+    },
+    "2023": {
+     "p_act": [
+      0.36,
+      0.29,
+      0.22,
+      0.19
+     ],
+     "obs_act": [
+      0.03,
+      0.01,
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "skill_next_issue": {
+   "issue_month": 10,
+   "years": "1981-2024",
+   "method": "leave-one-out, DAMP=0.25",
+   "skill": {
+    "1": {
+     "act": {
+      "base_rate": 0.089,
+      "auc_all": 0.92,
+      "auc_enso": 0.9,
+      "bss_all": 0.35,
+      "bss_enso": 0.32,
+      "bss_persist": 0.06
+     },
+     "cdi2": {
+      "base_rate": 0.108,
+      "auc_all": 0.9,
+      "auc_enso": 0.88,
+      "bss_all": 0.29,
+      "bss_enso": 0.27,
+      "bss_persist": -0.19
+     }
+    },
+    "2": {
+     "act": {
+      "base_rate": 0.089,
+      "auc_all": 0.92,
+      "auc_enso": 0.9,
+      "bss_all": 0.35,
+      "bss_enso": 0.32,
+      "bss_persist": -0.0
+     },
+     "cdi2": {
+      "base_rate": 0.121,
+      "auc_all": 0.92,
+      "auc_enso": 0.9,
+      "bss_all": 0.39,
+      "bss_enso": 0.35,
+      "bss_persist": 0.03
+     }
+    },
+    "3": {
+     "act": {
+      "base_rate": 0.092,
+      "auc_all": 0.88,
+      "auc_enso": 0.84,
+      "bss_all": 0.28,
+      "bss_enso": 0.25,
+      "bss_persist": -0.06
+     },
+     "cdi2": {
+      "base_rate": 0.117,
+      "auc_all": 0.84,
+      "auc_enso": 0.81,
+      "bss_all": 0.24,
+      "bss_enso": 0.23,
+      "bss_persist": -0.14
+     }
+    }
+   },
+   "cases": {
+    "2015": {
+     "p_act": [
+      0.25,
+      0.26,
+      0.22
+     ],
+     "obs_act": [
+      0.4,
+      0.15,
+      0.13
+     ]
+    },
+    "2018": {
+     "p_act": [
+      0.36,
+      0.36,
+      0.28
+     ],
+     "obs_act": [
+      0.03,
+      0.0,
+      0.0
+     ]
+    },
+    "2019": {
+     "p_act": [
+      0.52,
+      0.47,
+      0.43
+     ],
+     "obs_act": [
+      0.53,
+      0.71,
+      0.77
+     ]
+    },
+    "2023": {
+     "p_act": [
+      0.02,
+      0.01,
+      0.01
+     ],
+     "obs_act": [
+      0.01,
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "damp": 0.25
  },
  "local": {
   "water_supply": false,

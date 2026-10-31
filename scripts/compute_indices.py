@@ -299,9 +299,10 @@ DRY = {11, 12, 1, 2, 3, 4}
 
 
 # ---------- write ----------
-def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None):
+def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None, esp=None):
     irr = irr or {}; ddpm_risk = ddpm_risk or {}; local = local or {}
     supply = local.get("supply") or {}; alloc = local.get("alloc") or {}
+    esp = esp or {}; esp_rows = []
     from local_data import vuln_with_supply
     hist_rows = []
     os.makedirs(out, exist_ok=True)
@@ -346,6 +347,18 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None):
         for dte, row in t[t.index >= "2015-01-01"].iterrows():
             hist_rows.append((pc, dte, alert(int(row["agri_level"]), int(row["water_haz"]), v_hist, crop_frac, irr.get(pc))))
         sp = supply.get(pc)
+        pr = {}
+        if esp:   # ESP probabilistic outlook (scripts/esp_forecast.py)
+            import esp_forecast as F
+            afn = lambda ag, hz, tgt, _v=v["level"], _c=crop_frac, _i=irr.get(pc), _a=al: alert(ag, hz, _v, _c, _i, _a, tgt.month in DRY)
+            tb = F.Tambon(t)
+            for name, yrs in (("", esp["years"]), ("_all", esp["all_years"])):
+                e = F.ensemble(tb, now, yrs, cdi_step, afn, esp["horizon"])
+                for h in range(1, esp["horizon"] + 1):
+                    q = F.probs(e[h]) or {}
+                    for k in ("p_watch", "p_act", "p_water", "p_cdi2"):
+                        if k in q: pr[f"{k}{name}_e{h}"] = q[k]
+            esp_rows.append(pr)
         a_dec = alert(agri_dec, haz_dec, v["level"], crop_frac)
         r = lambda x, n=2: None if pd.isna(x) else round(float(x), n)
         p.update({
@@ -360,6 +373,7 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None):
             "irr_share": r(irr.get(pc)) if pc in irr else None,
             "hh": sp["hh"] if sp else None, "hh_no_tap": sp["hh_no_tap"] if sp else None,
             "no_tap_share": sp["no_tap_share"] if sp else None, "alloc": al["status"] if al else None,
+            **pr,
             "why": alert_reasons(int(cur["agri_level"]), int(cur["water_haz"]), v["level"], crop_frac, irr.get(pc), al, sp),
             **ddpm_risk.get(pc, {}),
             **{f"{c}_now": r(cur[c]) for c in ["spi3", "spi6", "sm_z", "veg_z", "vhi", "water_z"]},
@@ -384,6 +398,7 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None):
             "alert_counts_f2": pd.Series([x["alert_f2"] for x in summary]).value_counts().to_dict(),
             "notes": d.get("notes", []),
             "kpi": local_kpis(hist_rows, local, geo, latest_month, cols),
+            "esp": esp_meta(esp, esp_rows, now),
             "local": local.get("status", {}), "outlook": local.get("outlook", {}),
             "external": [{"id": em["id"], "name": em["name"], "units": em["units"], "kind": em["kind"], "use_in": em["use_in"],
                           "source": em.get("source", ""), "contact": em.get("contact", ""),
@@ -396,6 +411,24 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None):
     pd.DataFrame(summary).sort_values(["alert_now", "alert_f1", "alert_f2", "vuln"], ascending=False).to_csv(
         os.path.join(out, "tambon_alerts.csv"), index=False, encoding="utf-8-sig")
     return meta
+
+
+def esp_meta(esp, rows, now):
+    if not esp or not rows:
+        return None
+    H = esp["horizon"]; df = pd.DataFrame(rows)
+    skill = esp.get("skill", {})
+    return {"issue": now.strftime("%Y-%m"), "targets": [(now + pd.DateOffset(months=h)).strftime("%Y-%m") for h in range(1, H + 1)],
+            "ensemble": esp["label"], "n_traces": len(esp["years"]), "n_traces_all": len(esp["all_years"]),
+            # expected number of tambons at each level = sum of probabilities; "likely" = probability >= 50%
+            "expected_act": [round(float(df[f"p_act_e{h}"].sum()), 1) for h in range(1, H + 1)],
+            "expected_water": [round(float(df[f"p_water_e{h}"].sum()), 1) for h in range(1, H + 1)],
+            "expected_watch": [round(float(df[f"p_watch_e{h}"].sum()), 1) for h in range(1, H + 1)],
+            "likely_act": [int((df[f"p_act_e{h}"] >= 0.5).sum()) for h in range(1, H + 1)],
+            "mean_p_act_all": [round(float(df[f"p_act_all_e{h}"].mean()), 2) for h in range(1, H + 1)],
+            "mean_p_act": [round(float(df[f"p_act_e{h}"].mean()), 2) for h in range(1, H + 1)],
+            "skill_this_issue": skill.get(str(now.month)), "skill_next_issue": skill.get(str((now.month % 12) + 1)),
+            "damp": esp.get("damp")}
 
 
 def local_kpis(hist_rows, local, geo, latest_month, cols):
@@ -576,5 +609,13 @@ if __name__ == "__main__":
     if not supply: d["notes"].append("ยังไม่มีข้อมูลครัวเรือนที่ไม่มีประปา ระดับเตือนน้ำกินยังใช้เฉพาะประวัติภัยแล้งของ ปภ.")
     if not alloc: d["notes"].append("ยังไม่มีแผนจัดสรรน้ำฤดูแล้งของกรมชลประทาน ใช้สัดส่วนเขตชลประทานแทน")
     local = {"supply": supply, "alloc": alloc, "impacts": impacts, "outlook": outlook, "status": status}
-    meta = write(ts, geo, d, a.out, a.mock, load_vuln(a.vuln), irr, load_ddpm_risk(a.ddpm_risk), local)
+    import esp_forecast as F
+    years_all = list(range(1981, 2026))
+    nino_now = (outlook.get("enso") or {}).get("nino34")
+    on = nino_now is not None and nino_now >= 0.5
+    sk_path = os.path.join(os.path.dirname(a.boundaries), "esp_skill.json")
+    esp = {"horizon": F.H, "all_years": years_all, "damp": F.DAMP,
+           "years": [y for y in years_all if y in F.NINO_YEARS] if on else years_all,
+           "label": "nino" if on else "all", "skill": json.load(open(sk_path)) if os.path.exists(sk_path) else {}}
+    meta = write(ts, geo, d, a.out, a.mock, load_vuln(a.vuln), irr, load_ddpm_risk(a.ddpm_risk), local, esp)
     print(json.dumps(meta, ensure_ascii=False, indent=1))

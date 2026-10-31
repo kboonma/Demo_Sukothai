@@ -70,6 +70,13 @@ header{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-co
 .masthead .status{gap:10px}
 .why{font-size:.85rem;background:var(--bg2);border-radius:8px;padding:8px 12px}
 .why ul{margin:4px 0 0;padding-left:18px}
+.otiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:12px 0 8px}
+.otile{border:1px solid var(--line);border-left:4px solid var(--a1);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;background:var(--surface)}
+.otile.hot{border-left-color:var(--a2);background:var(--a2-soft)}
+.otile b{font:500 1.7rem/1.1 var(--display)} .otile b small{font-size:.9rem;font-weight:400}
+.otile small{color:var(--muted);font-size:.78rem;line-height:1.45}
+.ptab table{border-collapse:collapse;width:100%;font-size:.82rem;margin-top:4px}
+.ptab th,.ptab td{padding:3px 6px;text-align:center;border-bottom:1px solid var(--line)} .ptab tbody th{text-align:left;font-weight:400}
 .ktiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:12px 0 8px}
 .ktile{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
 .ktile b{font:500 1.6rem/1.1 var(--display);color:var(--accent)}
@@ -321,6 +328,13 @@ th{text-transform:none;letter-spacing:.02em}
   <div class="divider"><span>รายละเอียดสำหรับทีมวิเคราะห์</span></div>
   <div class="mock" id="notebar" hidden></div>
 
+  <section class="panel" id="outlook">
+    <div class="eyebrow">แนวโน้ม 4 เดือน · ความน่าจะเป็น</div>
+    <h2 id="ol-title">โอกาสเกิดภัยแล้งถึงต้นปีหน้า</h2>
+    <div class="otiles" id="ol-tiles"></div>
+    <p class="muted" id="ol-note" style="font-size:.85rem;max-width:95ch"></p>
+  </section>
+
   <section class="panel">
     <h2>รายชื่อตำบลทั้งหมด</h2>
     <div class="tools">
@@ -371,6 +385,7 @@ th{text-transform:none;letter-spacing:.02em}
         <li><b>ระดับเตือน</b> ใช้ตารางภัย × ความเปราะบาง: <span class="pill p3">เตรียมแจกจ่ายน้ำ</span> ภัยสูง และเคยแล้ง ≥ 1 ปี · <span class="pill p2">เตือนเกษตร</span> CDI ระดับ Warning ขึ้นไป และมีพื้นที่เพาะปลูก ≥ 10% · <span class="pill p1">เฝ้าระวัง</span> CDI Watch, ภัยสูงในตำบลที่ไม่เคยแล้ง หรือภัยปานกลางในตำบลที่เคยแล้ง</li>
         <li><b>ข้อมูลท้องถิ่น (เมื่อได้รับ)</b> ครัวเรือนไม่มีประปา ≥ 30% เพิ่มความเปราะบาง 1 ขั้น (ความเสี่ยง = ภัย × การเปิดรับ × ความเปราะบาง ตามกรอบ IPCC) · แผนส่งน้ำนาปรังของกรมชลประทาน: ส่งปกติ = ลดระดับแล้งเกษตร 1 ขั้น, จำกัด = ไม่ลด, งดส่งน้ำ = เตือนเกษตรในเดือนฤดูแล้ง (พ.ย.–เม.ย.) แม้ฝนยังไม่ขาด · ไม่มีแผน = ใช้สัดส่วนเขตชลประทาน</li>
         <li><b>ตัวชี้วัดของระบบ</b> ตามกรอบ WMO/GWP Handbook of Drought Indicators and Indices (2016): เตือนล่วงหน้ากี่เดือน, สัดส่วนตำบลที่ประกาศภัยแล้วระบบเตือนทัน, สัดส่วนที่เตือนแล้วเกิดจริง และความครอบคลุม</li>
+        <li><b>โอกาสเกิดภัยแล้ง (ESP)</b> แนวคิด Ensemble Streamflow Prediction: เริ่มจากสภาพล่าสุดของแต่ละตำบล ต่อด้วยฝนรายเดือนของปีในอดีตทีละปี (2524–2568) คิด SPI ด้วยพารามิเตอร์เดียวกับระบบติดตาม ความชื้นดินและพืชใช้ความต่อเนื่องแบบหน่วง (สหสัมพันธ์รายเดือนของตำบลนั้น) บวกความผิดปกติของปีนั้น แล้วใช้กฎ CDI และตารางความเสี่ยงเดิม · เมื่อมี El Niño ใช้เฉพาะปีที่มี El Niño ช่วง ก.ย.–พ.ย. (ONI ≥ +0.5) · ทดสอบย้อนหลังแบบ leave-one-out ทุกปี 2524–2567</li>
         <li><b>คาดการณ์ระยะสั้น</b> 1 และ 2 เดือนข้างหน้า: ค่าผิดปกติแต่ละตัว = สภาพล่าสุด (น้ำหนัก 0.7 และ 0.5) ผสมกับค่าเดือนเดียวกันในปี El Niño 2558, 2562, 2566 ใช้ดูทิศทาง ไม่ใช่การพยากรณ์อากาศ</li>
         <li><b>ทดสอบย้อนหลัง</b> ฤดูแล้ง 2562/63 ตำบล 84% อยู่ระดับ Warning ขึ้นไป ขณะที่ปีอื่นตั้งแต่ 2561 ไม่เกิน 7% รวมถึงปี El Niño 2566/67 ที่ไม่มีการประกาศภัย · การระบุว่า "ตำบลไหน" ยังพึ่งข้อมูลความเปราะบางเป็นหลัก</li>
       </ul>
@@ -482,7 +497,8 @@ function drawLegend() {
   else if (L.type === "cat") el.innerHTML = CATS[L.cats].labels.map((t,i)=>`<span class="tag"><span class="sw" style="background:${CATS[L.cats].colors[i]}"></span>${t}</span>`).join("");
   else {
     const st = L.type === "seq" ? SEQ : DIV;
-    el.innerHTML = `<span class="num">${L.lo}</span><span class="ramp" style="background:linear-gradient(90deg,${st.join(",")})"></span><span class="num">${L.hi}</span>
+    const lab = v => L.pct ? Math.round(v * 100) + "%" : v;
+    el.innerHTML = `<span class="num">${lab(L.lo)}</span><span class="ramp" style="background:linear-gradient(90deg,${st.join(",")})"></span><span class="num">${L.pct ? "≥ " : ""}${lab(L.hi)}</span>
       <span class="tag"><span class="sw" style="background:${NA}"></span>ไม่มีข้อมูล</span>`;
   }
   let extra = "";
@@ -603,6 +619,10 @@ function showDetail(pc) {
       <span>ภัยขาดน้ำ</span>${chip("HAZ",p.haz_now)}<span class="muted" style="font-size:.8rem">${CATS.HAZ.labels[p.haz_f1]} / ${CATS.HAZ.labels[p.haz_f2]}</span>
       <span>ความเปราะบาง</span><span style="grid-column:2/4">${chip("VUL",p.vuln)} <span class="muted" style="font-size:.8rem">${p.vuln_years} ปีใน 8 ปี · ${p.vuln_villages} หมู่บ้าน</span></span>
     </div>
+    ${meta.esp ? `<div class="ptab"><div class="eyebrow">โอกาส (แบบจำลอง ESP)</div><table><thead><tr><th></th>${meta.esp.targets.map(d => `<th>${monthTH(d)}</th>`).join("")}</tr></thead><tbody>
+      ${[["p_watch", "เฝ้าระวังขึ้นไป"], ["p_act", "เตือนเกษตร/แจกน้ำ"], ["p_water", "แจกจ่ายน้ำ"]].map(([k, t]) => `<tr><th>${t}</th>${meta.esp.targets.map((d, i) => { const v = p[`${k}_e${i + 1}`];
+        return `<td style="background:${v == null ? "none" : ramp(SEQ, v / .5)};color:${v >= .3 ? "#fff" : "inherit"}">${v == null ? "–" : Math.round(v * 100) + "%"}</td>`; }).join("")}</tr>`).join("")}
+      </tbody></table></div>` : ""}
     <div class="kv">
       <div><small>หมู่บ้านเสี่ยงสูง/สูงมาก (ปภ.)</small><span class="num">${p.dv_high ?? "–"} / ${p.dv_n ?? "–"}</span></div>
       <div><small>หมู่บ้านที่ภัยแล้งกระทบน้ำดื่ม · มักขาดแคลนน้ำ</small><span class="num">${p.dv_drink ?? "–"} · ${p.dv_short ?? "–"}</span></div>
@@ -686,6 +706,31 @@ function renderEnso() {
       <b>${T.rain_pct_of_normal != null ? T.rain_pct_of_normal + "% ของปกติ" : tc.lv}</b><span>${T.period || ""}</span><span class="what">${tc.what}</span>`; }
   else { tel.className = "enso enone"; tel.innerHTML = `<div class="row"><span class="eyebrow">ฝน 3 เดือน (อุตุฯ)</span></div><span class="what">ยังไม่ได้ใส่การคาดหมาย<br>ใน raw/local/outlook.json</span>`; }
 }
+function renderOutlook() {
+  const E = meta.esp, box = document.getElementById("outlook");
+  if (!E) { box.hidden = true; return; }
+  const S = E.skill_this_issue && E.skill_this_issue.skill, N = E.skill_next_issue && E.skill_next_issue.skill;
+  document.getElementById("ol-title").textContent = `โอกาสเกิดภัยแล้ง ${monthTH(E.targets[0])} – ${monthTH(E.targets[E.targets.length - 1])}`;
+  document.getElementById("ol-tiles").innerHTML = E.targets.map((d, i) => {
+    const base = S && S[i + 1] ? S[i + 1].act.base_rate : null, mp = E.mean_p_act[i];
+    const cmp = base == null ? "" : mp >= base * 1.5 ? "สูงกว่าปีปกติชัดเจน" : mp > base * 1.1 ? "สูงกว่าปีปกติเล็กน้อย" : mp < base * .9 ? "ต่ำกว่าปีปกติ" : "ใกล้เคียงปีปกติ";
+    return `<div class="otile${mp >= (base || 1) * 1.5 ? " hot" : ""}"><div class="eyebrow">${monthTH(d)}</div>
+      <b>~${Math.round(E.expected_act[i])} <small>ตำบล</small></b><span>คาดถึงระดับเตือนเกษตรหรือแจกจ่ายน้ำ</span>
+      <small>แจกจ่ายน้ำ ~${Math.round(E.expected_water[i])} · เฝ้าระวังขึ้นไป ~${Math.round(E.expected_watch[i])} ตำบล<br>
+      โอกาสเฉลี่ย ${Math.round(mp * 100)}%${base != null ? ` · ปีปกติ ${Math.round(base * 100)}%` : ""} · ${cmp}${E.likely_act[i] ? ` · ${E.likely_act[i]} ตำบลโอกาส ≥ 50%` : ""}</small></div>`; }).join("");
+  const f = x => x == null ? "–" : x.toFixed(2);
+  const auc = sk => sk ? [1, 2, 3, 4].map(h => sk[h] && sk[h].act.auc_all).filter(x => x != null) : [];
+  const a1 = auc(S), a2 = auc(N);
+  const rng = a => a.length ? `${f(Math.min(...a))}–${f(Math.max(...a))}` : "–";
+  const c19 = E.skill_next_issue && E.skill_next_issue.cases && E.skill_next_issue.cases["2019"];
+  const c18 = E.skill_next_issue && E.skill_next_issue.cases && E.skill_next_issue.cases["2018"];
+  document.getElementById("ol-note").innerHTML =
+    `<b>วิธีคิด</b> แบบจำลอง ESP: เริ่มจากสภาพฝน ความชื้นดิน และพืชของแต่ละตำบลเดือนล่าสุด แล้วต่อด้วยฝนและความผิดปกติของเดือนถัดไปจาก${E.ensemble === "nino" ? `ปีที่มี El Niño ${E.n_traces} ปี (เพราะปีนี้ El Niño)` : ` ${E.n_traces} ปีในอดีต`} คิดระดับเตือนด้วยกฎเดียวกับระบบติดตาม แล้วนับสัดส่วนปีที่ถึงระดับ · ` +
+    `<b>ความแม่นยำจากการทดสอบย้อนหลัง 2524–2567</b> ออกคาดการณ์จากข้อมูล ${TH_M[(E.skill_this_issue || {}).issue_month - 1] || ""}: AUC ${rng(a1)} (0.5 = เดา, 1 = แม่นทุกครั้ง) ระดับปานกลาง · ` +
+    `เมื่อได้ข้อมูลเดือนถัดไป (${TH_M[(E.skill_next_issue || {}).issue_month - 1] || ""}) AUC เพิ่มเป็น ${rng(a2)}` +
+    (c19 && c18 ? ` และแยกปี 2562 (ภัยแล้งจริง โอกาสเฉลี่ย ธ.ค. ${Math.round(c19.p_act[1] * 100)}%) ออกจากปี 2561 (ไม่แล้ง ${Math.round(c18.p_act[1] * 100)}%) ได้` : "") +
+    ` · <b>ควรรันใหม่ทันทีที่มีข้อมูลเดือนถัดไป</b> (ฝน CHIRPS และ ERA5-Land ออกราว 5–10 วันหลังสิ้นเดือน)`;
+}
 function renderKpi() {
   const K = meta.kpi || {}, B = K.backtest, el = document.getElementById("kpi-tiles"), L = meta.local || {};
   const tile = (v, lbl, sub, cls = "") => `<div class="ktile ${cls}"><b>${v}</b><span>${lbl}</span>${sub ? `<small>${sub}</small>` : ""}</div>`;
@@ -727,6 +772,7 @@ function renderExecutive(monthTH) {
   document.getElementById("brief-label").textContent = `สรุปสำหรับผู้บริหาร · สถานการณ์เดือน ${monthTH}`;
   renderEnso();
   renderKpi();
+  renderOutlook();
   const atRisk = P.filter(p => p.alert_now >= 1);
   const ge = (k, a) => P.filter(p => p[k] >= a).length;
   const trend = k => { const d = ge(k, 1) - atRisk.length; return d > 0 ? `เพิ่มเป็น ${ge(k, 1)} ตำบล` : d < 0 ? `ลดเหลือ ${ge(k, 1)} ตำบล` : `ทรงตัวที่ ${ge(k, 1)} ตำบล`; };
@@ -785,6 +831,14 @@ async function init() {
   document.getElementById("m-now").textContent = `${TH[+m-1]} ${+y+543}`;
   renderExecutive(TH[+m-1] + " " + (+y + 543));
 
+  const E = meta.esp;
+  if (E) {
+    const ens = E.ensemble === "nino" ? `ปี El Niño ${E.n_traces} ปี` : `ทุกปี ${E.n_traces} ปี`;
+    const add = E.targets.map((d, i) => ({id: `p_act_e${i + 1}`, label: `โอกาส ${monthTH(d)}`, type: "seq", lo: 0, hi: .5, pct: true,
+      note: `โอกาสที่ตำบลถึงระดับ "เตือนเกษตร" หรือ "แจกจ่ายน้ำ" ใน ${monthTH(d)} จากแบบจำลอง ESP (สภาพล่าสุด + ฝน/ความชื้นของ${ens}ในอดีต) · สีเข้มสุด = ≥ 50%`}));
+    const at = LAYERS.findIndex(L => L.id === "alert_f2") + 1;
+    LAYERS.splice(at, 0, {sep: true}, ...add);
+  }
   const USE_TH = {display: "แสดงผลเท่านั้น ยังไม่ใช้จัดระดับ", agri: "ใช้ร่วมจัดระดับแล้งเกษตร", water: "ใช้ร่วมจัดระดับภัยขาดน้ำ"};
   (meta.external || []).forEach(e => {
     const src = `${e.name}${e.source ? " · " + e.source : ""} · ${USE_TH[e.use_in] || e.use_in} · ข้อมูล ${e.first}–${e.last}`;
@@ -801,7 +855,7 @@ async function init() {
   setupBasemaps();
   gLayer = L.geoJSON(geo, {style, onEachFeature:(f,l) => {
     l.bindTooltip(() => { const p=f.properties, v=val(p, current);
-      let t = `<b>ต.${p.tambon}</b> อ.${p.amphoe}<br>${current.type==="alert" ? AL(v).t + (v ? " · " + AL(v).act : "") : current.type==="cat" ? CATS[current.cats].labels[v] : current.label+": "+fmt(v)}`;
+      let t = `<b>ต.${p.tambon}</b> อ.${p.amphoe}<br>${current.type==="alert" ? AL(v).t + (v ? " · " + AL(v).act : "") : current.type==="cat" ? CATS[current.cats].labels[v] : current.label+": "+(current.pct ? (v == null ? "–" : Math.round(v * 100) + "%") : fmt(v))}`;
       if (current.id === "alert_now" && histIdx == null) t += `<br><span style="opacity:.7">คาดการณ์ ${FM[0]}: ${AL(p.alert_f1).t} · ${FM[1]}: ${AL(p.alert_f2).t}</span>`;
       return t; }, {sticky:true});
     byPcFeature[f.properties.pcode] = f;
