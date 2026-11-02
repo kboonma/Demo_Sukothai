@@ -115,7 +115,10 @@ def ensemble(tb, issue, years, cdi_step, alert_fn, horizon=H, exclude=None):
         agri = np.array([cdi_step(s1[i], s3[i], sm[i], vg[i], prev[i]) for i in range(n)])
         haz = np.minimum(2, (s6 <= -1).astype(int) + (sd <= -1).astype(int))
         al = np.array([alert_fn(int(agri[i]), int(haz[i]), tgt) for i in range(n)])
-        res[h] = {"agri": agri[good], "haz": haz[good], "alert": al[good]}
+        res[h] = {"agri": agri[good], "haz": haz[good], "alert": al[good],
+                  # indicator values per trace, for plume charts (nan where unavailable)
+                  "spi3": spi[3][good], "spi6": spi[6][good], "sm_z": z["sm_z"][good], "smdeep_z": z["smdeep_z"][good],
+                  "year": np.array(ys)[ok][good]}
         prev = agri
     return res
 

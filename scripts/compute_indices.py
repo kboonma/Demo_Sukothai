@@ -302,7 +302,7 @@ DRY = {11, 12, 1, 2, 3, 4}
 def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None, esp=None):
     irr = irr or {}; ddpm_risk = ddpm_risk or {}; local = local or {}
     supply = local.get("supply") or {}; alloc = local.get("alloc") or {}
-    esp = esp or {}; esp_rows = []
+    esp = esp or {}; esp_rows = []; esp_traces = {}    # pcode -> {h: {var: array}} (main ensemble) for province plume
     from local_data import vuln_with_supply
     hist_rows = []
     os.makedirs(out, exist_ok=True)
@@ -354,11 +354,18 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None, esp
             tb = F.Tambon(t)
             for name, yrs in (("", esp["years"]), ("_all", esp["all_years"])):
                 e = F.ensemble(tb, now, yrs, cdi_step, afn, esp["horizon"])
+                if name == "":
+                    esp_traces[pc] = e
                 for h in range(1, esp["horizon"] + 1):
                     q = F.probs(e[h]) or {}
                     for k in ("p_watch", "p_act", "p_water", "p_cdi2"):
                         if k in q: pr[f"{k}{name}_e{h}"] = q[k]
             esp_rows.append(pr)
+            # per-tambon plume: 10/50/90th percentiles of the trace values, and P(exact alert level)
+            qs = lambda x: [None if np.isnan(x).all() else round(float(np.nanpercentile(x, q)), 2) for q in (10, 50, 90)]
+            series_fc = {"dates": [(now + pd.DateOffset(months=h)).strftime("%Y-%m") for h in range(1, esp["horizon"] + 1)],
+                         **{c: [qs(esp_traces[pc][h][c]) for h in range(1, esp["horizon"] + 1)] for c in ("spi3", "sm_z", "smdeep_z")},
+                         "p_level": [[round(float((esp_traces[pc][h]["alert"] == k).mean()), 2) for k in range(4)] for h in range(1, esp["horizon"] + 1)]}
         a_dec = alert(agri_dec, haz_dec, v["level"], crop_frac)
         r = lambda x, n=2: None if pd.isna(x) else round(float(x), n)
         p.update({
@@ -386,6 +393,8 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None, esp
                       **{c: [r(x) for x in sub[c]] for c in ["rain_mm", "spi3", "spi6", "sm_z", "veg_z", "vhi", "water_z"]},
                       **{c: [r(x) for x in sub[c]] for c in ext_cols},
                       "agri_level": [int(x) for x in sub["agri_level"]], "water_haz": [int(x) for x in sub["water_haz"]]}
+        if esp:
+            series[pc]["fc"] = series_fc
         summary.append({k: p.get(k) for k in ["pcode", "amphoe", "tambon", "alert_now", "alert_f1", "alert_f2", "agri_now", "agri_f1",
                                               "haz_now", "haz_f1", "vuln", "vuln_years", "pop_2020"]})
     meta = {"generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "mock": mock,
@@ -398,7 +407,7 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None, esp
             "alert_counts_f2": pd.Series([x["alert_f2"] for x in summary]).value_counts().to_dict(),
             "notes": d.get("notes", []),
             "kpi": local_kpis(hist_rows, local, geo, latest_month, cols),
-            "esp": esp_meta(esp, esp_rows, now),
+            "esp": esp_meta(esp, esp_rows, now, esp_traces, ts),
             "local": local.get("status", {}), "outlook": local.get("outlook", {}),
             "external": [{"id": em["id"], "name": em["name"], "units": em["units"], "kind": em["kind"], "use_in": em["use_in"],
                           "source": em.get("source", ""), "contact": em.get("contact", ""),
@@ -413,7 +422,32 @@ def write(ts, geo, d, out, mock, vuln, irr=None, ddpm_risk=None, local=None, esp
     return meta
 
 
-def esp_meta(esp, rows, now):
+def province_plume(esp_traces, ts, now, H, analog=2019):
+    """Province mean of each trace (all tambons share the same trace years), last 12 observed months,
+    and the same calendar window in an analog year for comparison."""
+    out = {"obs_dates": [], "fc_dates": [(now + pd.DateOffset(months=h)).strftime("%Y-%m") for h in range(1, H + 1)]}
+    prov = ts.groupby(level="date")[["spi3", "sm_z", "smdeep_z"]].mean()
+    win = prov[(prov.index > now - pd.DateOffset(months=12)) & (prov.index <= now)]
+    out["obs_dates"] = [d.strftime("%Y-%m") for d in win.index]
+    dy = now.year - analog
+    an = [d - pd.DateOffset(years=dy) for d in list(win.index) + [now + pd.DateOffset(months=h) for h in range(1, H + 1)]]
+    out["analog_year"] = analog
+    for c in ("spi3", "sm_z", "smdeep_z"):
+        out[c + "_obs"] = [None if pd.isna(x) else round(float(x), 2) for x in win[c]]
+        out[c + "_analog"] = [None if (d not in prov.index or pd.isna(prov.loc[d, c])) else round(float(prov.loc[d, c]), 2) for d in an]
+        q = []
+        for h in range(1, H + 1):
+            arrs = [e[h][c] for e in esp_traces.values() if len(e[h][c])]
+            n = min(len(a) for a in arrs) if arrs else 0
+            if not n:
+                q.append(None); continue
+            m = np.nanmean(np.stack([a[:n] for a in arrs]), axis=0)        # province mean per trace
+            q.append([round(float(np.nanpercentile(m, p)), 2) for p in (10, 25, 50, 75, 90)])
+        out[c + "_fc"] = q
+    return out
+
+
+def esp_meta(esp, rows, now, esp_traces=None, ts=None):
     if not esp or not rows:
         return None
     H = esp["horizon"]; df = pd.DataFrame(rows)
@@ -428,7 +462,8 @@ def esp_meta(esp, rows, now):
             "mean_p_act_all": [round(float(df[f"p_act_all_e{h}"].mean()), 2) for h in range(1, H + 1)],
             "mean_p_act": [round(float(df[f"p_act_e{h}"].mean()), 2) for h in range(1, H + 1)],
             "skill_this_issue": skill.get(str(now.month)), "skill_next_issue": skill.get(str((now.month % 12) + 1)),
-            "damp": esp.get("damp")}
+            "damp": esp.get("damp"),
+            "province": province_plume(esp_traces, ts, now, H) if esp_traces else None}
 
 
 def local_kpis(hist_rows, local, geo, latest_month, cols):

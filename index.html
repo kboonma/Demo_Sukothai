@@ -94,6 +94,25 @@ body.view-an .ex{display:none!important}
 .fs-bar .fill{width:100%;border-radius:8px;display:flex;justify-content:center;align-items:flex-start;min-height:26px}
 .cnt{display:inline-block;min-width:26px;text-align:center;border-radius:999px;padding:1px 8px;font:500 .85rem var(--mono)}
 .cnt.l3{background:var(--a3);color:#fff} .cnt.l2{background:var(--a2);color:#fff} .cnt.l1{background:var(--a1);color:var(--a1-ink)}
+.fs-grid{display:grid;grid-template-columns:3fr 2fr;gap:14px}
+@media (max-width:900px){.fs-grid{grid-template-columns:1fr}}
+.fs-card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--surface);min-width:0}
+.fs-ct{display:flex;flex-wrap:wrap;gap:6px 12px;justify-content:space-between;align-items:center;margin-bottom:6px}
+.fs-ct h3{font-size:1rem}
+.cbox{position:relative;height:280px} .cbox.sm{height:190px}
+.seg{display:flex;gap:2px;background:var(--bg2);border-radius:999px;padding:2px}
+.seg button{font:500 .78rem var(--body);border:0;background:none;color:var(--muted);border-radius:999px;padding:3px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.fs-key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.75rem;color:var(--muted);margin-top:6px}
+.fs-key i{display:inline-block;width:18px;height:10px;vertical-align:0;margin-right:5px;border-radius:2px}
+.k-obs{border-top:3px solid var(--fg);height:0!important;vertical-align:3px!important}
+.k-band{background:color-mix(in srgb,var(--accent) 30%,transparent)}
+.k-med{border-top:2px dashed var(--accent);height:0!important;vertical-align:3px!important}
+.k-an{border-top:2px dotted #9aa3a1;height:0!important;vertical-align:3px!important}
+.k-thr{background:var(--a2-soft);border-top:2px dashed var(--a2)}
+.fs-verdict{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center;font-size:.8rem;margin-top:6px}
+.fs-verdict div{display:flex;flex-direction:column;align-items:center;gap:2px}
+.tp{margin-top:6px}
 .fs-n{font:500 1.5rem/1 var(--display)} .fs-n small{font-size:.8rem;font-weight:400;color:var(--muted)}
 .fs-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.78rem;color:var(--muted);margin:-4px 0 10px}
 .fs-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
@@ -670,7 +689,8 @@ function showDetail(pc) {
     ${meta.esp ? `<div class="ptab"><div class="eyebrow">โอกาส (แบบจำลอง ESP)</div><table><thead><tr><th></th>${meta.esp.targets.map(d => `<th>${monthTH(d)}</th>`).join("")}</tr></thead><tbody>
       ${[["p_watch", "เฝ้าระวังขึ้นไป"], ["p_act", "เตือนเกษตร/แจกน้ำ"], ["p_water", "แจกจ่ายน้ำ"]].map(([k, t]) => `<tr><th>${t}</th>${meta.esp.targets.map((d, i) => { const v = p[`${k}_e${i + 1}`];
         return `<td style="background:${v == null ? "none" : ramp(SEQ, v / .5)};color:${v >= .3 ? "#fff" : "inherit"}">${v == null ? "–" : Math.round(v * 100) + "%"}</td>`; }).join("")}</tr>`).join("")}
-      </tbody></table></div>` : ""}
+      </tbody></table></div>
+    <div class="tp"><div class="fs-ct"><div class="eyebrow">ความชื้นดิน: ย้อนหลัง 12 เดือนและช่วงคาดการณ์</div></div><div class="cbox sm"><canvas id="t-plume"></canvas></div></div>` : ""}
     <div class="kv">
       <div><small>หมู่บ้านเสี่ยงสูง/สูงมาก (ปภ.)</small><span class="num">${p.dv_high ?? "–"} / ${p.dv_n ?? "–"}</span></div>
       <div><small>หมู่บ้านที่ภัยแล้งกระทบน้ำดื่ม · มักขาดแคลนน้ำ</small><span class="num">${p.dv_drink ?? "–"} · ${p.dv_short ?? "–"}</span></div>
@@ -687,6 +707,11 @@ function showDetail(pc) {
     </div>
     <div><div class="eyebrow" style="margin-bottom:4px">ระดับรายเดือน 2561–ปัจจุบัน</div><div class="chartbox"><canvas id="ts-chart" aria-label="กราฟระดับภัยแล้งรายเดือน"></canvas></div></div>`;
   document.getElementById("back-am").onclick = showAmphoe;
+  if (s && s.fc && document.getElementById("t-plume")) {
+    const nObs = 12, i0 = s.dates.length - nObs, obs = s.sm_z ? s.sm_z.slice(i0) : [];
+    if (tPlume) tPlume.destroy();
+    tPlume = new Chart(document.getElementById("t-plume"), plumeConfig(s.dates.slice(i0).concat(s.fc.dates), obs, null, s.fc.sm_z, nObs, {ticks: 6}));
+  }
   if (chart) chart.destroy();
   if (!s) return;
   const i19 = s.dates.indexOf("2019-10"), i20 = s.dates.indexOf("2020-06");
@@ -774,20 +799,27 @@ function renderExecView() {
     stat(ICON.people, people(pop), "ประชากรในตำบลที่มีระดับเตือน") +
     (dec ? stat(ICON.trend, dec.v.t, `แนวโน้ม ${dec.m} (~${dec.n} ตำบลถึงระดับเตือน)`) : "") +
     stat(ICON.cal, nextUpdate(), "อัปเดตครั้งถัดไป ด้วยข้อมูลเดือนใหม่");
-  // forecast strip: one bar per month, expected tambons at action level vs a normal year
+  // forecast panel: plume chart (province) + expected tambons per level (stacked)
   const fs = document.getElementById("fstrip");
-  if (!E) { fs.hidden = true; } else {
-    const base = E.targets.map((d, i) => S && S[i + 1] ? S[i + 1].act.base_rate * P.length : null);
-    const mx = Math.max(4, ...E.expected_act, ...base.filter(x => x != null)) * 1.25;
+  if (!E || !E.province) { fs.hidden = true; } else {
     const auc = S ? Math.max(...[1, 2, 3, 4].map(h => S[h] ? S[h].act.auc_all : 0)) : 0;
     const conf = auc >= .85 ? ["สูง", "c2"] : auc >= .7 ? ["ปานกลาง", "c1"] : ["ต่ำ", "c0"];
-    fs.innerHTML = `<div class="fs-head"><div><div class="eyebrow">แนวโน้ม 4 เดือนข้างหน้า</div><h2>ตำบลที่คาดว่าจะถึงระดับเตือน</h2></div>
+    const chips = E.targets.map((d, i) => { const v = verdict(E.mean_p_act[i], S && S[i + 1] ? S[i + 1].act.base_rate : null);
+      return `<div><b>${monthTH(d)}</b><span class="vchip ${v.c}">${v.t}</span></div>`; }).join("");
+    fs.innerHTML = `<div class="fs-head"><div><div class="eyebrow">แนวโน้ม 4 เดือนข้างหน้า</div><h2>ภัยแล้งจะเป็นอย่างไรต่อ</h2></div>
       <div class="fs-badges"><span class="badge ${conf[1]}">ความเชื่อมั่น ${conf[0]}</span><span class="badge c0">แม่นขึ้นเมื่ออัปเดต ${nextUpdate()}</span></div></div>
-      <div class="fs-legend"><span><i class="lg-norm"></i>ปีปกติ (ค่าเฉลี่ยในอดีต)</span><span><i class="lg v0"></i>ใกล้เคียง/ต่ำกว่าปกติ</span><span><i class="lg v1"></i>สูงกว่าปกติเล็กน้อย</span><span><i class="lg v2"></i>สูงกว่าปกติ</span></div>
-      <div class="fs-cols">${E.targets.map((d, i) => { const n = E.expected_act[i], b = base[i], v = verdict(E.mean_p_act[i], b == null ? null : b / P.length);
-        return `<div class="fs-col"><div class="fs-n">~${Math.round(n)} <small>ตำบล</small></div><div class="fs-bar"><div class="fill ${v.c}" style="height:${n / mx * 100}%"></div>
-          ${b != null ? `<div class="norm" style="bottom:${b / mx * 100}%" title="ปีปกติ ~${Math.round(b)} ตำบล"></div>` : ""}</div>
-          <div class="fs-m">${monthTH(d)}</div><span class="vchip ${v.c}">${v.t}</span></div>`; }).join("")}</div>`;
+      <div class="fs-grid">
+        <div class="fs-card"><div class="fs-ct"><h3>ระดับความแห้ง ทั้งจังหวัด</h3>
+          <div class="seg" role="group" aria-label="ตัวชี้วัด"><button type="button" data-v="smdeep_z" aria-pressed="true">น้ำในดิน</button><button type="button" data-v="spi3" aria-pressed="false">ฝน 3 เดือน</button></div></div>
+          <div class="cbox"><canvas id="plume" aria-label="กราฟความแห้งย้อนหลังและช่วงคาดการณ์"></canvas></div>
+          <div class="fs-key"><span><i class="k-obs"></i>ที่เกิดขึ้นจริง</span><span><i class="k-band"></i>ช่วงคาดการณ์ (8 ใน 10 ปี)</span><span><i class="k-med"></i>ค่ากลางคาดการณ์</span><span><i class="k-an"></i>ปี ${E.province.analog_year + 543} (ปีภัยแล้ง)</span><span><i class="k-thr"></i>เกณฑ์แล้ง</span></div></div>
+        <div class="fs-card"><div class="fs-ct"><h3>จำนวนตำบลที่คาดในแต่ละระดับ</h3></div>
+          <div class="cbox"><canvas id="lvbars" aria-label="จำนวนตำบลที่คาดในแต่ละระดับรายเดือน"></canvas></div>
+          <div class="fs-verdict">${chips}</div></div>
+      </div>`;
+    fs.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+      fs.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); drawPlume(b.dataset.v); });
+    drawPlume("smdeep_z"); drawLevelBars();
   }
   // system performance strip
   const K = meta.kpi || {}, B = K.backtest && K.backtest.by_level["2"], L = meta.local || {};
@@ -798,6 +830,63 @@ function renderExecView() {
     <div class="kmn"><b>${B ? Math.round(B.hit_rate * 100) + "%" : "–"}</b><span>ตำบลประกาศภัย<br>ที่ระบบเตือนทัน</span></div>
     <div class="kmn"><b>${K.tambons || 86}</b><span>ตำบล<br>ครอบคลุมทั้งจังหวัด</span></div>
     <div class="kneed"><div class="eyebrow">ข้อมูลจากหน่วยงานในจังหวัด</div><div>${NEED.map(([k, t]) => `<span class="nchip ${L[k] ? "ok" : "miss"}">${L[k] ? "✓" : "○"} ${t}</span>`).join("")}</div></div></div>`;
+}
+let plumeChart, lvChart, tPlume;
+// one plume chart builder used for the province and for a tambon
+function plumeConfig(labels, obs, an, q, nObs, opts = {}) {
+  const pad = a => Array(nObs - 1).fill(null).concat(a);
+  const last = obs[nObs - 1];
+  const band = k => pad([last, ...q.map(x => x ? x[k] : null)]);
+  const has5 = q[0] && q[0].length === 5;
+  const ds = [
+    {label: "p90", data: band(has5 ? 4 : 2), borderWidth: 0, pointRadius: 0, backgroundColor: "transparent", fill: false},
+    {label: "p10", data: band(0), borderWidth: 0, pointRadius: 0, backgroundColor: css("--accent") + "26", fill: "-1"}];
+  if (has5) ds.push({label: "p75", data: band(3), borderWidth: 0, pointRadius: 0, fill: false},
+                    {label: "p25", data: band(1), borderWidth: 0, pointRadius: 0, backgroundColor: css("--accent") + "40", fill: "-1"});
+  ds.push({label: "ค่ากลางคาดการณ์", data: band(has5 ? 2 : 1), borderColor: css("--accent"), borderDash: [5, 4], borderWidth: 2, pointRadius: 0, fill: false},
+          {label: "จริง", data: obs.concat(Array(labels.length - nObs).fill(null)), borderColor: css("--fg"), borderWidth: 2.5, pointRadius: 2, fill: false});
+  if (an) ds.push({label: "เทียบ", data: an, borderColor: "#9aa3a1", borderDash: [2, 3], borderWidth: 1.6, pointRadius: 0, fill: false});
+  const thr = {id: "thr", beforeDatasetsDraw(c) { const {ctx, chartArea: a, scales: {x, y}} = c;
+    ctx.save(); ctx.fillStyle = css("--a2-soft"); const y1 = y.getPixelForValue(-1); ctx.fillRect(a.left, y1, a.right - a.left, a.bottom - y1);
+    ctx.strokeStyle = css("--a2"); ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(a.left, y1); ctx.lineTo(a.right, y1); ctx.stroke();
+    ctx.fillStyle = css("--a2-ink"); ctx.font = "11px " + css("--body"); ctx.fillText("แห้งผิดปกติ", a.left + 4, y1 + 13);
+    const xn = x.getPixelForValue(nObs - 1); ctx.strokeStyle = css("--muted"); ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(xn, a.top); ctx.lineTo(xn, a.bottom); ctx.stroke();
+    ctx.fillStyle = css("--muted"); ctx.fillText("คาดการณ์ →", xn + 4, a.top + 11); ctx.restore(); }};
+  return {type: "line", plugins: [thr], data: {labels: labels.map(d => monthTH(d).replace(/ (\d\d)(\d\d)$/, " $2")), datasets: ds},
+    options: {responsive: true, maintainAspectRatio: false, animation: false, spanGaps: false,
+      interaction: {mode: "index", intersect: false},
+      plugins: {legend: {display: false}, tooltip: {filter: i => ["จริง", "ค่ากลางคาดการณ์", "เทียบ"].includes(i.dataset.label) && i.raw != null,
+        callbacks: {label: i => `${i.dataset.label === "เทียบ" ? opts.anLabel || "เทียบ" : i.dataset.label}: ${i.raw.toFixed(2)}`}}},
+      scales: {x: {ticks: {color: css("--muted"), font: {size: 10}, maxRotation: 0, autoSkip: true, maxTicksLimit: opts.ticks || 8}, grid: {display: false}},
+               y: {min: -3, max: 3, ticks: {color: css("--muted"), stepSize: 1, font: {size: 10}, callback: v => ({2: "ชื้นมาก", 0: "ปกติ", "-2": "แห้งมาก"})[v] ?? ""},
+                   grid: {color: css("--line")}}}}};
+}
+function drawPlume(v) {
+  const pv = meta.esp.province, labels = pv.obs_dates.concat(pv.fc_dates);
+  if (plumeChart) plumeChart.destroy();
+  plumeChart = new Chart(document.getElementById("plume"),
+    plumeConfig(labels, pv[v + "_obs"], pv[v + "_analog"], pv[v + "_fc"], pv.obs_dates.length, {anLabel: "ปี " + (pv.analog_year + 543)}));
+}
+function drawLevelBars() {
+  const E = meta.esp, n = geo.features.length, S = E.skill_this_issue && E.skill_this_issue.skill;
+  const w = E.expected_water, a = E.expected_act.map((x, i) => x - w[i]), wt = E.expected_watch.map((x, i) => x - E.expected_act[i]);
+  const nm = E.expected_watch.map(x => n - x);
+  const base = E.targets.map((d, i) => S && S[i + 1] ? +(S[i + 1].act.base_rate * n).toFixed(1) : null);
+  if (lvChart) lvChart.destroy();
+  const r = x => Math.round(x * 10) / 10;
+  lvChart = new Chart(document.getElementById("lvbars"), {type: "bar",
+    data: {labels: E.targets.map(d => monthTH(d)), datasets: [
+      {label: "แจกจ่ายน้ำ", data: w.map(r), backgroundColor: css("--a3"), stack: "s"},
+      {label: "เตือนเกษตร", data: a.map(r), backgroundColor: css("--a2"), stack: "s"},
+      {label: "เฝ้าระวัง", data: wt.map(r), backgroundColor: css("--a1"), stack: "s"},
+      {label: "ปกติ", data: nm.map(r), backgroundColor: "#cfe6d6", stack: "s"},
+      {type: "line", label: "ปีปกติ (เตือนเกษตรขึ้นไป)", data: base, borderColor: css("--fg"), backgroundColor: css("--fg"),
+       pointStyle: "line", pointRadius: 26, pointHoverRadius: 26, pointBorderWidth: 3, showLine: false, order: -1}]},
+    options: {responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: {legend: {position: "bottom", labels: {color: css("--fg"), boxWidth: 10, font: {size: 11}}},
+        tooltip: {callbacks: {label: i => `${i.dataset.label}: ~${Math.round(i.raw)} ตำบล`}}},
+      scales: {x: {stacked: true, ticks: {color: css("--fg"), font: {size: 11}}, grid: {display: false}},
+               y: {stacked: true, max: n, ticks: {color: css("--muted"), font: {size: 10}, stepSize: 20, callback: v => v % 20 === 0 ? v : ""}, grid: {color: css("--line")}, title: {display: true, text: "ตำบล", color: css("--muted")}}}}});
 }
 const ICON = {
   people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.8.3 5 2.6 5 5.8"/></svg>',
