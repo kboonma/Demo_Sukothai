@@ -70,6 +70,45 @@ header{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-co
 .masthead .status{gap:10px}
 .why{font-size:.85rem;background:var(--bg2);border-radius:8px;padding:8px 12px}
 .why ul{margin:4px 0 0;padding-left:18px}
+/* executive vs analyst view */
+body:not(.view-an) .an{display:none!important}
+body.view-an .ex{display:none!important}
+.viewbar{align-self:flex-end;display:flex;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;margin-bottom:-8px;box-shadow:var(--shadow)}
+.viewbar button{font:500 .85rem var(--body);border:0;background:none;color:var(--muted);border-radius:999px;padding:5px 14px;cursor:pointer}
+.viewbar button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.mhstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:6px}
+.mstat{display:flex;gap:12px;align-items:center;background:rgb(255 255 255 / .07);border-radius:10px;padding:10px 12px}
+.mstat .mic{width:34px;height:34px;flex:none;border-radius:50%;background:rgb(255 255 255 / .12);display:grid;place-items:center;color:var(--on-ink-accent)}
+.mstat .mic svg{width:20px;height:20px}
+.mstat b{display:block;font:500 1.35rem/1.15 var(--display);color:#fff}
+.mstat span{color:var(--on-ink-muted);font-size:.8rem;line-height:1.3;display:block}
+.todo1{font-size:.95rem;font-weight:400}
+.fs-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;align-items:flex-end;margin-bottom:12px}
+.fs-badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{font:500 .78rem var(--body);border-radius:999px;padding:3px 10px;background:var(--bg2);color:var(--fg);border:1px solid var(--line)}
+.badge.c1{background:var(--a1-soft);border-color:var(--a1);color:var(--a1-ink)} .badge.c2{background:#e2f1e6;border-color:#7fbf8f;color:#1d4a2b}
+.fs-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media (max-width:600px){.fs-cols{gap:6px}}
+.fs-col{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.fs-bar{position:relative;width:100%;max-width:120px;height:150px;background:var(--bg2);border-radius:8px;display:flex;align-items:flex-end;overflow:visible}
+.fs-bar .fill{width:100%;border-radius:8px;display:flex;justify-content:center;align-items:flex-start;min-height:26px}
+.cnt{display:inline-block;min-width:26px;text-align:center;border-radius:999px;padding:1px 8px;font:500 .85rem var(--mono)}
+.cnt.l3{background:var(--a3);color:#fff} .cnt.l2{background:var(--a2);color:#fff} .cnt.l1{background:var(--a1);color:var(--a1-ink)}
+.fs-n{font:500 1.5rem/1 var(--display)} .fs-n small{font-size:.8rem;font-weight:400;color:var(--muted)}
+.fs-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.78rem;color:var(--muted);margin:-4px 0 10px}
+.fs-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+.lg.v0{background:#7fbf8f} .lg.v1{background:var(--a1)} .lg.v2{background:var(--a2)} .lg-norm{border-top:2px dashed var(--fg);height:0!important;border-radius:0!important;opacity:.6;vertical-align:3px!important}
+.fill.v0{background:#7fbf8f} .fill.v1{background:var(--a1)} .fill.v1 span{color:var(--a1-ink)} .fill.v2{background:var(--a2)}
+.fs-bar .norm{position:absolute;left:-4px;right:-4px;border-top:2px dashed var(--fg);opacity:.55}
+.fs-m{font-weight:500}
+.vchip{font-size:.75rem;border-radius:999px;padding:1px 9px}
+.vchip.v0{background:#e2f1e6;color:#1d4a2b} .vchip.v1{background:var(--a1-soft);color:var(--a1-ink)} .vchip.v2{background:var(--a2-soft);color:var(--a2-ink)}
+.km{display:grid;grid-template-columns:repeat(3,minmax(110px,auto)) 1fr;gap:12px 24px;align-items:center}
+@media (max-width:760px){.km{grid-template-columns:repeat(3,1fr)} .kneed{grid-column:1/-1}}
+.kmn{display:flex;gap:8px;align-items:center} .kmn b{font:500 2rem/1 var(--display);color:var(--accent)} .kmn span{font-size:.78rem;line-height:1.3;color:var(--muted)}
+.kneed > div:last-child{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.nchip{font-size:.78rem;border-radius:999px;padding:2px 10px;border:1px solid var(--line)}
+.nchip.ok{background:#e2f1e6;color:#1d4a2b;border-color:#bfe0c8} .nchip.miss{color:var(--a2-ink);background:var(--a2-soft);border-color:var(--a2)}
 .otiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:12px 0 8px}
 .otile{border:1px solid var(--line);border-left:4px solid var(--a1);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;background:var(--surface)}
 .otile.hot{border-left-color:var(--a2);background:var(--a2-soft)}
@@ -248,6 +287,10 @@ th{text-transform:none;letter-spacing:.02em}
 </style>
 
 <div class="wrap">
+  <div class="viewbar" role="group" aria-label="มุมมอง">
+    <button type="button" data-view="exec" aria-pressed="true">มุมมองผู้บริหาร</button>
+    <button type="button" data-view="an" aria-pressed="false">ข้อมูลละเอียด</button>
+  </div>
   <section class="masthead" aria-labelledby="headline">
     <svg class="contours" viewBox="0 0 600 400" aria-hidden="true" preserveAspectRatio="xMaxYMid slice">
       <g fill="none" stroke="currentColor" stroke-width="1">
@@ -271,7 +314,8 @@ th{text-transform:none;letter-spacing:.02em}
     <div class="mh-brief" id="brief">
       <div class="brief-top"><span class="eyebrow" id="brief-label">สรุปสำหรับผู้บริหาร · สถานการณ์ล่าสุด</span><span class="brief-lv" id="brief-lv"></span></div>
       <h2 id="headline">กำลังโหลดข้อมูล…</h2>
-      <p class="sub" id="subline"></p>
+      <p class="sub an" id="subline"></p>
+      <div class="mhstats ex" id="mhstats"></div>
     </div>
   </section>
 
@@ -280,6 +324,8 @@ th{text-transform:none;letter-spacing:.02em}
     <div class="acard l2" id="act2"></div>
     <div class="acard l1" id="act1"></div>
   </div>
+
+  <section class="panel ex" id="fstrip"></section>
 
   <div class="mock" id="mockbar" hidden><b>ข้อมูลดัชนีบนหน้านี้เป็นข้อมูลจำลอง</b> ใช้เพื่อแสดงรูปแบบ dashboard เท่านั้น</div>
 
@@ -295,7 +341,7 @@ th{text-transform:none;letter-spacing:.02em}
         <div class="basemaps" id="basemaps" role="group" aria-label="แผนที่พื้นหลัง"></div>
       </div>
       <div class="legend" id="legend"></div>
-      <div class="layer-note" id="layernote"></div>
+      <div class="layer-note an" id="layernote"></div>
       <details class="maptools" id="maptools">
         <summary>ชั้นข้อมูลอื่น ซ้อนทับ และดูย้อนหลัง</summary>
         <div class="ovl" id="overlays" role="group" aria-label="ชั้นข้อมูลซ้อนทับ"></div>
@@ -314,28 +360,30 @@ th{text-transform:none;letter-spacing:.02em}
       <h2 style="margin-bottom:8px">อำเภอที่ต้องประสาน</h2>
       <div class="tablebox" style="max-height:none">
         <table class="amtable">
-          <thead><tr><th>อำเภอ</th><th style="text-align:right">แจกจ่ายน้ำ</th><th style="text-align:right">เตือนเกษตร</th><th style="text-align:right">เฝ้าระวัง</th><th style="text-align:right">ประชากร</th><th style="text-align:right" title="หมู่บ้านที่ ปภ. ประเมินว่าภัยแล้งกระทบน้ำดื่ม ในตำบลที่มีระดับเตือน">หมู่บ้านกระทบน้ำดื่ม</th></tr></thead>
+          <thead><tr><th>อำเภอ</th><th style="text-align:right">แจกจ่ายน้ำ</th><th style="text-align:right">เตือนเกษตร</th><th style="text-align:right">เฝ้าระวัง</th><th style="text-align:right">ประชากร</th><th class="an" style="text-align:right" title="หมู่บ้านที่ ปภ. ประเมินว่าภัยแล้งกระทบน้ำดื่ม ในตำบลที่มีระดับเตือน">หมู่บ้านกระทบน้ำดื่ม</th></tr></thead>
           <tbody id="ambody"></tbody>
         </table>
       </div>
-      <p class="muted" style="font-size:.85rem;margin:12px 0 0">ระดับเตือนจากข้อมูลเดือนล่าสุด · ประชากร = รวมในตำบลที่มีระดับเตือน · คลิกตำบลบนแผนที่เพื่อดูรายละเอียดด้านล่าง</p>
-      <div class="mock" style="margin-top:12px" id="nextstep"></div>
+      <p class="muted an" style="font-size:.85rem;margin:12px 0 0">ระดับเตือนจากข้อมูลเดือนล่าสุด · ประชากร = รวมในตำบลที่มีระดับเตือน · คลิกตำบลบนแผนที่เพื่อดูรายละเอียดด้านล่าง</p>
+      <div class="mock an" style="margin-top:12px" id="nextstep"></div>
       </div>
       <div class="detail" id="detail" hidden></div>
     </aside>
   </div>
 
-  <div class="divider"><span>รายละเอียดสำหรับทีมวิเคราะห์</span></div>
-  <div class="mock" id="notebar" hidden></div>
+  <section class="panel ex" id="kpimini"></section>
 
-  <section class="panel" id="outlook">
+  <div class="divider an"><span>รายละเอียดสำหรับทีมวิเคราะห์</span></div>
+  <div class="mock an" id="notebar" hidden></div>
+
+  <section class="panel an" id="outlook">
     <div class="eyebrow">แนวโน้ม 4 เดือน · ความน่าจะเป็น</div>
     <h2 id="ol-title">โอกาสเกิดภัยแล้งถึงต้นปีหน้า</h2>
     <div class="otiles" id="ol-tiles"></div>
     <p class="muted" id="ol-note" style="font-size:.85rem;max-width:95ch"></p>
   </section>
 
-  <section class="panel">
+  <section class="panel an">
     <h2>รายชื่อตำบลทั้งหมด</h2>
     <div class="tools">
       <label for="f-amphoe" class="muted">อำเภอ</label>
@@ -352,7 +400,7 @@ th{text-transform:none;letter-spacing:.02em}
     </div>
   </section>
 
-  <section class="panel" id="kpi">
+  <section class="panel an" id="kpi">
     <div class="eyebrow">ตัวชี้วัดของระบบ</div>
     <h2>ระบบเตือนได้ดีแค่ไหน และยังขาดข้อมูลอะไร</h2>
     <div class="ktiles" id="kpi-tiles"></div>
@@ -361,7 +409,7 @@ th{text-transform:none;letter-spacing:.02em}
     <ul class="kdata" id="kpi-data"></ul>
   </section>
 
-  <section class="panel">
+  <section class="panel an">
     <div class="eyebrow">ปีเทียบเคียง</div>
     <h2>ปี 2562–63 สุโขทัยเคยประกาศภัยแล้งในเดือนธันวาคม</h2>
     <p class="muted" style="max-width:70ch">ข้อมูล ปภ. ปี 2560–2567 พบหมู่บ้านในพื้นที่ภัยแล้งเฉพาะปี 2561, 2562 และ 2563 รวม 310 หมู่บ้าน 42 ตำบล ใน 7 จาก 9 อำเภอ ปี 2564–2567 ไม่มีการประกาศ ตำบลในอำเภอเมืองและคีรีมาศหลายแห่งเกิดซ้ำ 2–3 ปี</p>
@@ -373,7 +421,7 @@ th{text-transform:none;letter-spacing:.02em}
     </div>
   </section>
 
-  <details class="panel">
+  <details class="panel an">
     <summary>วิธีคิดระดับเตือนและแหล่งข้อมูล</summary>
     <div class="cols">
     <div>
@@ -704,8 +752,57 @@ function renderEnso() {
   if (tc) { tel.className = "enso " + tc.c; tel.title = T.source || "";
     tel.innerHTML = `<div class="row"><span class="eyebrow">ฝน 3 เดือน (อุตุฯ)</span><span class="lv">${tc.lv}</span></div>
       <b>${T.rain_pct_of_normal != null ? T.rain_pct_of_normal + "% ของปกติ" : tc.lv}</b><span>${T.period || ""}</span><span class="what">${tc.what}</span>`; }
-  else { tel.className = "enso enone"; tel.innerHTML = `<div class="row"><span class="eyebrow">ฝน 3 เดือน (อุตุฯ)</span></div><span class="what">ยังไม่ได้ใส่การคาดหมาย<br>ใน raw/local/outlook.json</span>`; }
+  else { tel.className = "enso enone an"; tel.innerHTML = `<div class="row"><span class="eyebrow">ฝน 3 เดือน (อุตุฯ)</span></div><span class="what">ยังไม่ได้ใส่การคาดหมาย<br>ใน raw/local/outlook.json</span>`; }
 }
+function decIndex(E) { const i = E.targets.findIndex(d => d.endsWith("-12")); return i < 0 ? E.targets.length - 1 : i; }
+function verdict(mp, base) {
+  if (base == null) return {t: "–", c: "v0"};
+  if (mp >= base * 1.5) return {t: "สูงกว่าปกติ", c: "v2"};
+  if (mp > base * 1.1) return {t: "สูงกว่าปกติเล็กน้อย", c: "v1"};
+  if (mp < base * .9) return {t: "ต่ำกว่าปกติ", c: "v0"};
+  return {t: "ใกล้เคียงปกติ", c: "v0"};
+}
+const nextUpdate = () => { const [y, m] = meta.now_month.split("-").map(Number); const d = new Date(y, m + 1, 10); return `~${d.getDate()} ${TH_M[d.getMonth()]}`; };
+function renderExecView() {
+  const P = geo.features.map(f => f.properties), E = meta.esp;
+  const atRisk = P.filter(p => p.alert_now >= 1), pop = atRisk.reduce((s, p) => s + (p.pop_2020 || 0), 0);
+  const S = E && E.skill_this_issue && E.skill_this_issue.skill;
+  let dec = null;
+  if (E) { const i = decIndex(E); dec = {m: monthTH(E.targets[i]), n: Math.round(E.expected_act[i]), v: verdict(E.mean_p_act[i], S && S[i + 1] ? S[i + 1].act.base_rate : null)}; }
+  const stat = (ic, big, lbl) => `<div class="mstat"><span class="mic">${ic}</span><div><b>${big}</b><span>${lbl}</span></div></div>`;
+  document.getElementById("mhstats").innerHTML =
+    stat(ICON.people, people(pop), "ประชากรในตำบลที่มีระดับเตือน") +
+    (dec ? stat(ICON.trend, dec.v.t, `แนวโน้ม ${dec.m} (~${dec.n} ตำบลถึงระดับเตือน)`) : "") +
+    stat(ICON.cal, nextUpdate(), "อัปเดตครั้งถัดไป ด้วยข้อมูลเดือนใหม่");
+  // forecast strip: one bar per month, expected tambons at action level vs a normal year
+  const fs = document.getElementById("fstrip");
+  if (!E) { fs.hidden = true; } else {
+    const base = E.targets.map((d, i) => S && S[i + 1] ? S[i + 1].act.base_rate * P.length : null);
+    const mx = Math.max(4, ...E.expected_act, ...base.filter(x => x != null)) * 1.25;
+    const auc = S ? Math.max(...[1, 2, 3, 4].map(h => S[h] ? S[h].act.auc_all : 0)) : 0;
+    const conf = auc >= .85 ? ["สูง", "c2"] : auc >= .7 ? ["ปานกลาง", "c1"] : ["ต่ำ", "c0"];
+    fs.innerHTML = `<div class="fs-head"><div><div class="eyebrow">แนวโน้ม 4 เดือนข้างหน้า</div><h2>ตำบลที่คาดว่าจะถึงระดับเตือน</h2></div>
+      <div class="fs-badges"><span class="badge ${conf[1]}">ความเชื่อมั่น ${conf[0]}</span><span class="badge c0">แม่นขึ้นเมื่ออัปเดต ${nextUpdate()}</span></div></div>
+      <div class="fs-legend"><span><i class="lg-norm"></i>ปีปกติ (ค่าเฉลี่ยในอดีต)</span><span><i class="lg v0"></i>ใกล้เคียง/ต่ำกว่าปกติ</span><span><i class="lg v1"></i>สูงกว่าปกติเล็กน้อย</span><span><i class="lg v2"></i>สูงกว่าปกติ</span></div>
+      <div class="fs-cols">${E.targets.map((d, i) => { const n = E.expected_act[i], b = base[i], v = verdict(E.mean_p_act[i], b == null ? null : b / P.length);
+        return `<div class="fs-col"><div class="fs-n">~${Math.round(n)} <small>ตำบล</small></div><div class="fs-bar"><div class="fill ${v.c}" style="height:${n / mx * 100}%"></div>
+          ${b != null ? `<div class="norm" style="bottom:${b / mx * 100}%" title="ปีปกติ ~${Math.round(b)} ตำบล"></div>` : ""}</div>
+          <div class="fs-m">${monthTH(d)}</div><span class="vchip ${v.c}">${v.t}</span></div>`; }).join("")}</div>`;
+  }
+  // system performance strip
+  const K = meta.kpi || {}, B = K.backtest && K.backtest.by_level["2"], L = meta.local || {};
+  const NEED = [["water_supply", "ครัวเรือนไม่มีประปา"], ["rid_allocation", "แผนส่งน้ำนาปรัง"], ["impact_reports", "รายงานผลกระทบ อปท."],
+                ["irrigation_official", "เขตชลประทาน"], ["reservoirs", "อ่างเก็บน้ำ"], ["outlook", "ENSO/พยากรณ์ฝน"]];
+  document.getElementById("kpimini").innerHTML = `<div class="km">
+    <div class="kmn"><b>${B && B.lead_median_months != null ? B.lead_median_months : "–"}</b><span>เดือน<br>เตือนล่วงหน้า</span></div>
+    <div class="kmn"><b>${B ? Math.round(B.hit_rate * 100) + "%" : "–"}</b><span>ตำบลประกาศภัย<br>ที่ระบบเตือนทัน</span></div>
+    <div class="kmn"><b>${K.tambons || 86}</b><span>ตำบล<br>ครอบคลุมทั้งจังหวัด</span></div>
+    <div class="kneed"><div class="eyebrow">ข้อมูลจากหน่วยงานในจังหวัด</div><div>${NEED.map(([k, t]) => `<span class="nchip ${L[k] ? "ok" : "miss"}">${L[k] ? "✓" : "○"} ${t}</span>`).join("")}</div></div></div>`;
+}
+const ICON = {
+  people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.8.3 5 2.6 5 5.8"/></svg>',
+  trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
+  cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'};
 function renderOutlook() {
   const E = meta.esp, box = document.getElementById("outlook");
   if (!E) { box.hidden = true; return; }
@@ -773,6 +870,7 @@ function renderExecutive(monthTH) {
   renderEnso();
   renderKpi();
   renderOutlook();
+  renderExecView();
   const atRisk = P.filter(p => p.alert_now >= 1);
   const ge = (k, a) => P.filter(p => p[k] >= a).length;
   const trend = k => { const d = ge(k, 1) - atRisk.length; return d > 0 ? `เพิ่มเป็น ${ge(k, 1)} ตำบล` : d < 0 ? `ลดเหลือ ${ge(k, 1)} ตำบล` : `ทรงตัวที่ ${ge(k, 1)} ตำบล`; };
@@ -791,10 +889,10 @@ function renderExecutive(monthTH) {
     if (a === 3 && arr.length) extra = noTap.length ? ` · ครัวเรือนไม่มีประปา ${hhNo.toLocaleString("th-TH")} ครัวเรือน${noTap.length < arr.length ? ` (มีข้อมูล ${noTap.length}/${arr.length} ตำบล)` : ""}` : " · ยังไม่มีข้อมูลครัวเรือนไม่มีประปา";
     if (a === 2 && arr.length && cc.warn_by_month) extra = ` · ควรเตือนภายใน ${TH_M[cc.warn_by_month - 1]} ก่อนเริ่มปลูกนาปรัง ${TH_M[(cc.naprang_plant_month || 12) - 1]}`;
     html += arr.length
-      ? `<div class="muted" style="font-size:.85rem">ประชากรราว ${people(pop(arr))} คน${extra}</div><ul>${A.todo.map(t => `<li>${t}</li>`).join("")}</ul><div class="chips">${chips}</div>`
+      ? `<div class="muted an" style="font-size:.85rem">ประชากรราว ${people(pop(arr))} คน${extra}</div><div class="todo1 ex">${A.todo[0]}</div><ul class="an">${A.todo.map(t => `<li>${t}</li>`).join("")}</ul><div class="chips">${chips}</div>`
       : `<div class="zero">ยังไม่มีตำบลถึงระดับนี้</div>`;
     if (arr.length && a >= 2) html += `<div class="now">${arr.map(p => "ต." + p.tambon).join(", ")}</div>`;
-    html += `<div class="now muted">คาดการณ์ ${FM[0]}: ${P.filter(p => p.alert_f1 === a).length} ตำบล · ${FM[1]}: ${P.filter(p => p.alert_f2 === a).length} ตำบล</div>`;
+    html += `<div class="now muted an">คาดการณ์ ${FM[0]}: ${P.filter(p => p.alert_f1 === a).length} ตำบล · ${FM[1]}: ${P.filter(p => p.alert_f2 === a).length} ตำบล</div>`;
     el.innerHTML = html;
   });
   // amphoe coordination table
@@ -802,9 +900,9 @@ function renderExecutive(monthTH) {
   P.forEach(p => { const r = am[p.amphoe] = am[p.amphoe] || {a3: 0, a2: 0, a1: 0, pop: 0, dw: 0};
     if (p.alert_now >= 1) { r["a" + p.alert_now]++; r.pop += p.pop_2020 || 0; r.dw += p.dv_drink || 0; } });
   const rows = Object.entries(am).sort((x, y) => (y[1].a3 - x[1].a3) || (y[1].a2 - x[1].a2) || (y[1].a1 - x[1].a1) || (y[1].pop - x[1].pop));
-  const cell = v => v ? `<td class="n num">${v}</td>` : `<td class="n num z">–</td>`;
+  const cell = (v, lv) => v ? `<td class="n"><span class="cnt l${lv}">${v}</span></td>` : `<td class="n num z">–</td>`;
   document.getElementById("ambody").innerHTML = rows.map(([a, r]) =>
-    `<tr style="cursor:default"><td>${a}</td>${cell(r.a3)}${cell(r.a2)}${cell(r.a1)}<td class="n num">${r.pop ? people(r.pop) : "–"}</td>${cell(r.dw)}</tr>`).join("");
+    `<tr style="cursor:default"><td>${a}</td>${cell(r.a3, 3)}${cell(r.a2, 2)}${cell(r.a1, 1)}<td class="n num">${r.pop ? people(r.pop) : "–"}</td><td class="n num an${r.dw ? "" : " z"}">${r.dw || "–"}</td></tr>`).join("");
   document.getElementById("nextstep").innerHTML = `<b>อัปเดตถัดไป:</b> ต้นเดือน พ.ย. เมื่อได้ข้อมูลฝนเดือน ต.ค. ซึ่งเป็นช่วงที่ปี 2562 เริ่มแล้งชัด
     <div style="margin-top:8px"><button type="button" id="go2019" class="chip" style="cursor:pointer">เทียบกับแผนที่ ธ.ค. 2562 (ปีที่ประกาศภัย) →</button></div>`;
   document.getElementById("go2019").onclick = () => { const i = DATES.indexOf("2019-12"); if (i >= 0) setMonth(i);
@@ -812,6 +910,15 @@ function renderExecutive(monthTH) {
     document.getElementById("map").scrollIntoView({behavior: "smooth", block: "center"}); };
 }
 
+function setView(v) {
+  document.body.classList.toggle("view-an", v === "an");
+  document.querySelectorAll(".viewbar button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
+  try { localStorage.setItem("dw-view", v); } catch (e) {}
+  if (map) setTimeout(() => map.invalidateSize(), 50);
+}
+document.querySelectorAll(".viewbar button").forEach(b => b.onclick = () => setView(b.dataset.view));
+(() => { let v = new URLSearchParams(location.search).get("view"); if (!v) { try { v = localStorage.getItem("dw-view"); } catch (e) {} }
+  setView(v === "an" ? "an" : "exec"); })();
 async function init() {
   const get = u => fetch(u, {cache: "no-cache"}).then(r => { if (!r.ok) throw new Error(u); return r.json(); });
   [geo, ts, meta] = await Promise.all([get("data/tambons.geojson"), get("data/timeseries.json"), get("data/meta.json")]);
