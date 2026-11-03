@@ -3,6 +3,9 @@
 Tambon-level drought early-warning prototype for Sukhothai province, December 2026 outlook.
 Static site for GitHub Pages: `index.html` + JSON files in `data/`.
 
+**Live dashboard:** https://kboonma.github.io/Demo_Sukothai/  
+(executive view: [`?view=exec`](https://kboonma.github.io/Demo_Sukothai/?view=exec) · analyst view: [`?view=an`](https://kboonma.github.io/Demo_Sukothai/?view=an))
+
 > **Status:** concept prototype. Index values are **synthetic (mock)** until the Earth Engine exports are processed; `meta.json` → `"mock": true` shows a banner on the page. The DDPM drought-declaration layer is real open data.
 
 ## Structure
